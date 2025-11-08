@@ -5,18 +5,22 @@ import type { MaxCard, MaxCardInput } from '../api/shared/max-card.ts';
 type MaxCardDocument = Omit<MaxCard, 'id' | 'date'> & {
   _id?: ObjectId;
   date: Date;
+  image?: string; // base64 строка изображения
 };
 
 type InsertableMaxCardDocument = OptionalUnlessRequiredId<MaxCardDocument>;
 
 /**
- * Загружает все карточки инициатив из MongoDB и приводит документы к DTO для UI.
+ * Загружает все карточки инициатив из MongoDB со статусом "accepted" и приводит документы к DTO для UI.
  *
  * Успешное выполнение возвращает массив карточек в удобном формате.
  * В случае ошибки пробрасывает исключение MongoDB, чтобы вызывающий код обработал его.
  */
 export async function getMaxCards(): Promise<MaxCard[]> {
-  const docs = await db.collection<MaxCardDocument>('max_cards').find().sort({ date: -1 }).toArray();
+  const docs = await db.collection<MaxCardDocument>('max_cards')
+    .find({ status: 'accepted' })
+    .sort({ date: -1 })
+    .toArray();
   return docs.map((doc) => ({
     id: doc._id ? doc._id.toString() : '',
     category: doc.category,
@@ -26,6 +30,7 @@ export async function getMaxCards(): Promise<MaxCard[]> {
     status: doc.status,
     date: doc.date.toISOString(),
     ...(doc.link ? { link: doc.link } : {}),
+    ...(doc.image ? { image: doc.image } : {}),
   }));
 }
 
@@ -43,6 +48,7 @@ export async function createMaxCard(card: MaxCardInput): Promise<MaxCard> {
     status: card.status,
     date: new Date(),
     ...(card.link ? { link: card.link } : {}),
+    ...(card.image ? { image: card.image } : {}),
   };
 
   const result = await db.collection<MaxCardDocument>('max_cards').insertOne(document);

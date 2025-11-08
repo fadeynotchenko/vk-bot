@@ -7,6 +7,7 @@ export interface MaxCard {
   status: string;
   date: string;
   link?: string;
+  image?: string; // base64 строка изображения
 }
 
 export type MaxCardInput = Omit<MaxCard, 'id' | 'date'>;

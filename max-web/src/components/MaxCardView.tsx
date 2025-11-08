@@ -36,6 +36,18 @@ const mediaStyle: CSSProperties = {
   position: 'absolute',
   inset: 0,
   background: `linear-gradient(135deg, ${colors.accent} 0%, #e24c78 60%, #c2336f 100%)`,
+  objectFit: 'cover',
+  width: '100%',
+  height: '100%',
+};
+
+const imageStyle: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  objectPosition: 'center',
 };
 
 const gradientOverlayStyle: CSSProperties = {
@@ -61,7 +73,11 @@ export function MaxCardView({ card, onOpen }: MaxCardViewProps) {
   return (
     <button type="button" onClick={() => onOpen(card)} style={buttonStyle}>
       <div style={cardStyle}>
-        <div style={mediaStyle} />
+        {card.image ? (
+          <img src={card.image} alt={card.title} style={imageStyle} />
+        ) : (
+          <div style={mediaStyle} />
+        )}
         <div style={gradientOverlayStyle} />
         <div style={contentOverlayStyle}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

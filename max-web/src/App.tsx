@@ -132,9 +132,11 @@ export default function App() {
             color: colors.textPrimary,
             margin: 0,
             padding: `0 ${layout.contentXPadding}`,
+            fontSize: 20,
+            fontWeight: 700,
           }}
         >
-          MAX Cards
+          Добрая душа
         </Typography.Title>
         <div style={listAreaStyle}>
           {error ? (

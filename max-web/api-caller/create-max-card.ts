@@ -6,15 +6,33 @@ type CreateMaxCardResponse =
   | { ok: true; data: MaxCard }
   | { ok: false; error: string };
 
-export type CreateMaxCardPayload = MaxCardCreatePayload;
+export type CreateMaxCardPayload = Omit<MaxCardCreatePayload, 'image'> & {
+  image?: File | null;
+};
 
 export async function createMaxCardFromUI(payload: CreateMaxCardPayload): Promise<MaxCard> {
+  const formData = new FormData();
+  
+  // Добавляем текстовые поля
+  formData.append('category', payload.category);
+  formData.append('title', payload.title);
+  formData.append('subtitle', payload.subtitle);
+  formData.append('text', payload.text);
+  formData.append('status', payload.status);
+  
+  if (payload.link) {
+    formData.append('link', payload.link);
+  }
+  
+  // Добавляем файл изображения, если он есть
+  if (payload.image) {
+    formData.append('image', payload.image);
+  }
+
   const response = await fetch(`${API}/create-card`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+    body: formData,
+    // Не устанавливаем Content-Type вручную - браузер сам установит с boundary
   });
 
   if (!response.ok) {

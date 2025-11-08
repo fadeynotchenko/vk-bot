@@ -43,6 +43,17 @@ const heroMediaStyle: CSSProperties = {
   position: 'absolute',
   inset: 0,
   background: `linear-gradient(135deg, ${colors.accent} 0%, #e24c78 60%, #c2336f 100%)`,
+  width: '100%',
+  height: '100%',
+};
+
+const heroImageStyle: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  objectPosition: 'center',
 };
 
 const heroGradientStyle: CSSProperties = {
@@ -101,7 +112,11 @@ export function MaxCardDetail({ card, onBack }: MaxCardDetailProps) {
       </button>
 
       <div style={heroStyle}>
-        <div style={heroMediaStyle} />
+        {card.image ? (
+          <img src={card.image} alt={card.title} style={heroImageStyle} />
+        ) : (
+          <div style={heroMediaStyle} />
+        )}
         <div style={heroGradientStyle} />
         <div style={heroContentStyle}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

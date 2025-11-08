@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import { handleGetMaxCards } from "./endpoints/get-max-cards.ts";
 import { handleCreateMaxCard } from "./endpoints/create-max-card.ts";
 import { connectDB } from "../db/db-client.ts";
@@ -20,6 +21,12 @@ async function startServer() {
     await app.register(cors, {
       origin: true,
       credentials: true,
+    });
+
+    await app.register(multipart, {
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+      },
     });
 
     app.get("/fetch-cards", handleGetMaxCards);

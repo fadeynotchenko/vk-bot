@@ -141,6 +141,7 @@ export function CreateInitiativeScreen({ onBack, onCardCreated }: CreateInitiati
   const [shortDescription, setShortDescription] = useState('');
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageName, setImageName] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -152,6 +153,7 @@ export function CreateInitiativeScreen({ onBack, onCardCreated }: CreateInitiati
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    setImageFile(file || null);
     setImageName(file ? file.name : null);
     setImagePreview((prev) => {
       if (prev) {
@@ -186,6 +188,7 @@ export function CreateInitiativeScreen({ onBack, onCardCreated }: CreateInitiati
         text: description.trim(),
         status: 'moderate',
         ...(trimmedLink ? { link: trimmedLink } : {}),
+        ...(imageFile ? { image: imageFile } : {}),
       };
       const card = await createMaxCardFromUI(payload);
 
@@ -194,6 +197,7 @@ export function CreateInitiativeScreen({ onBack, onCardCreated }: CreateInitiati
       setShortDescription('');
       setDescription('');
       setLink('');
+      setImageFile(null);
       setImageName(null);
       setImagePreview((prev) => {
         if (prev) {
