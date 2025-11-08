@@ -1,0 +1,10 @@
+services:
+  vk-bot:
+    build:
+      context: .
+    image: vk-bot:latest
+    env_file: .env
+    ports:
+      - "8788:8788"
+      - "4173:4173"
+    restart: unless-stopped

@@ -29,6 +29,11 @@ export async function getMaxCards(): Promise<MaxCard[]> {
   }));
 }
 
+/**
+ * Создаёт новую карточку инициативы в MongoDB из данных, пришедших с UI/бота.
+ *
+ * В случае неуспеха пробрасывает исключение MongoDB.
+ */
 export async function createMaxCard(card: MaxCardInput): Promise<MaxCard> {
   const document: InsertableMaxCardDocument = {
     category: card.category,

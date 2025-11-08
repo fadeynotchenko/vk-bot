@@ -1,5 +1,5 @@
 import { type CSSProperties, type PropsWithChildren } from 'react';
-import { colors } from './theme';
+import { colors, layout } from './theme';
 
 const rootStyle: CSSProperties = {
   backgroundColor: colors.backgroundPrimary,
@@ -14,7 +14,7 @@ const baseStyle: CSSProperties = {
   minHeight: '100dvh',
   minWidth: 0,
   width: '100%',
-  maxWidth: 720,
+  maxWidth: layout.pageWidth,
   margin: '0 auto',
   backgroundColor: colors.backgroundPrimary,
   padding: '24px 0',
