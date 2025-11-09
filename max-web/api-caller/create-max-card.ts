@@ -38,7 +38,6 @@ export async function createMaxCardFromUI(payload: CreateMaxCardPayload): Promis
   const response = await fetch(`${API}/create-card`, {
     method: 'POST',
     body: formData,
-    // Не устанавливаем Content-Type вручную - браузер сам установит с boundary
   });
 
   if (!response.ok) {

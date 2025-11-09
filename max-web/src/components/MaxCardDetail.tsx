@@ -2,6 +2,7 @@ import { type CSSProperties } from 'react';
 import { Button, Typography } from '@maxhub/max-ui';
 import { colors, layout, shadows } from './theme';
 import type { MaxCard } from '../../api-caller/get-max-cards.ts';
+// Также поддерживает карточки из get-user-cards.ts
 import { TagBadge } from './TagBadge';
 import { formatCardDate } from '../utils/formatDate.ts';
 

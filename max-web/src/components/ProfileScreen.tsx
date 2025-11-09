@@ -1,7 +1,10 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { Typography, Button } from '@maxhub/max-ui';
+import { Typography, Button, Spinner } from '@maxhub/max-ui';
 import { colors, layout } from './theme';
 import { getMaxUser, getUserFullName, getUserInitials, type MaxUser } from '../utils/maxBridge';
+import { fetchUserCardsFromUI, type MaxCard } from '../../api-caller/get-user-cards.ts';
+import { UserCardView } from './UserCardView';
+import { MaxCardDetail } from './MaxCardDetail';
 
 type ProfileScreenProps = {
   onCreateInitiative: () => void;
@@ -74,12 +77,28 @@ const userIdStyle: CSSProperties = {
   fontWeight: 400,
 };
 
+const cardsListStyle: CSSProperties = {
+  width: '100%',
+  padding: `0 0 24px`,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 24,
+};
+
+const emptyStateStyle: CSSProperties = {
+  padding: '32px 0',
+  textAlign: 'center',
+  color: colors.textSecondary,
+};
+
 export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
   const [user, setUser] = useState<MaxUser | null>(null);
+  const [cards, setCards] = useState<MaxCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<MaxCard | null>(null);
 
   useEffect(() => {
-    // Получаем данные пользователя при монтировании компонента
-    // Используем небольшую задержку на случай, если WebApp еще не полностью инициализирован
     const loadUser = () => {
       const maxUser = getMaxUser();
       if (maxUser) {
@@ -89,10 +108,8 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
       return false;
     };
 
-    // Пробуем загрузить сразу
     const loaded = loadUser();
 
-    // Если данные не загрузились, пробуем еще раз через небольшую задержку
     if (!loaded) {
       const timeoutId = setTimeout(() => {
         loadUser();
@@ -101,9 +118,48 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+
+    fetchUserCardsFromUI(user.id)
+      .then((data) => {
+        if (isMounted) {
+          setCards(data);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          const message = err instanceof Error ? err.message : String(err);
+          setError(message);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
   const fullName = getUserFullName(user);
   const initials = getUserInitials(user);
   const hasPhoto = user?.photoUrl;
+
+  if (selectedCard) {
+    return (
+      <MaxCardDetail
+        card={selectedCard}
+        onBack={() => setSelectedCard(null)}
+      />
+    );
+  }
 
   return (
     <div style={containerStyle}>
@@ -144,6 +200,42 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
       >
         Создать инициативу
       </Button>
+
+      <div style={{ marginTop: 8 }}>
+        <Typography.Title
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 700,
+            color: colors.textPrimary,
+            marginBottom: 16,
+          }}
+        >
+          Мои инициативы
+        </Typography.Title>
+
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+            <Spinner size={32} appearance="primary" />
+          </div>
+        ) : error ? (
+          <Typography.Body style={{ color: colors.error, padding: '32px 0' }}>
+            Не удалось загрузить инициативы: {error}
+          </Typography.Body>
+        ) : cards.length === 0 ? (
+          <div style={emptyStateStyle}>
+            <Typography.Body style={{ color: colors.textSecondary }}>
+              У вас пока нет инициатив
+            </Typography.Body>
+          </div>
+        ) : (
+          <div style={cardsListStyle}>
+            {cards.map((card) => (
+              <UserCardView key={card.id} card={card} onOpen={setSelectedCard} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

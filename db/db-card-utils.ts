@@ -37,6 +37,32 @@ export async function getMaxCards(): Promise<MaxCard[]> {
 }
 
 /**
+ * Загружает все карточки инициатив пользователя по user_id из MongoDB.
+ * Возвращает карточки со всеми статусами (moderate, accepted, rejected).
+ *
+ * Успешное выполнение возвращает массив карточек в удобном формате.
+ * В случае ошибки пробрасывает исключение MongoDB, чтобы вызывающий код обработал его.
+ */
+export async function getUserMaxCards(userId: number): Promise<MaxCard[]> {
+  const docs = await db.collection<MaxCardDocument>('max_cards')
+    .find({ user_id: userId })
+    .sort({ date: -1 })
+    .toArray();
+  return docs.map((doc) => ({
+    id: doc._id ? doc._id.toString() : '',
+    category: doc.category,
+    title: doc.title,
+    subtitle: doc.subtitle,
+    text: doc.text,
+    status: doc.status,
+    date: doc.date.toISOString(),
+    ...(doc.link ? { link: doc.link } : {}),
+    ...(doc.image ? { image: doc.image } : {}),
+    ...(doc.user_id ? { user_id: doc.user_id } : {}),
+  }));
+}
+
+/**
  * Создаёт новую карточку инициативы в MongoDB из данных, пришедших с UI/бота.
  *
  * В случае неуспеха пробрасывает исключение MongoDB.

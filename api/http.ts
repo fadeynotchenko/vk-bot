@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { handleGetMaxCards } from "./endpoints/get-max-cards.ts";
 import { handleCreateMaxCard } from "./endpoints/create-max-card.ts";
+import { handleGetUserCards } from "./endpoints/get-user-cards.ts";
 import { connectDB } from "../db/db-client.ts";
 
 const LISTEN_URL = process.env.API_LISTEN_URL ?? "http://127.0.0.1:8788";
@@ -30,6 +31,7 @@ async function startServer() {
     });
 
     app.get("/fetch-cards", handleGetMaxCards);
+    app.get("/user-cards", handleGetUserCards);
     app.post("/create-card", handleCreateMaxCard);
 
     const address = await app.listen({ host, port });
