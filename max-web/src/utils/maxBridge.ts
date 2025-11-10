@@ -110,7 +110,7 @@ export function isMaxBridgeAvailable(): boolean {
  * @returns функция для отписки от всех событий
  */
 export function onAppClose(callback: () => void): () => void {
-  let hasCalled = false; // Защита от множественных вызовов
+  let hasCalled = false;
   const callOnce = () => {
     if (hasCalled) {
       console.log('⚠️ App close callback already called, skipping duplicate call');
@@ -127,11 +127,9 @@ export function onAppClose(callback: () => void): () => void {
 
   const cleanupFunctions: Array<() => void> = [];
 
-  // 1. MAX Bridge событие viewportChanged (основной способ для MAX)
   if (window.WebApp?.onEvent) {
     const handleViewportChanged = (data: any) => {
       console.log('🔔 viewportChanged event received:', data);
-      // Событие viewportChanged с isStateVisible: false означает закрытие мини-приложения
       if (data?.isStateVisible === false) {
         console.log('📱 App close event detected (viewportChanged with isStateVisible: false)');
         callOnce();
@@ -154,9 +152,7 @@ export function onAppClose(callback: () => void): () => void {
     console.warn('⚠️ MAX Bridge onEvent is not available, using browser events only');
   }
 
-  // 2. Событие pagehide (надежнее beforeunload, особенно на мобильных)
   const handlePageHide = (event: PageTransitionEvent) => {
-    // pagehide с persisted: false означает, что страница действительно закрывается
     if (!event.persisted) {
       console.log('📱 App close event detected (pagehide)');
       callOnce();
@@ -169,11 +165,9 @@ export function onAppClose(callback: () => void): () => void {
     window.removeEventListener('pagehide', handlePageHide);
   });
 
-  // 3. Fallback: событие visibilitychange (когда страница становится скрытой)
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'hidden') {
       console.log('📱 App close event detected (visibilitychange: hidden)');
-      // Небольшая задержка, чтобы не сработать при простом переключении вкладок
       setTimeout(() => {
         if (document.visibilityState === 'hidden') {
           callOnce();
@@ -186,7 +180,6 @@ export function onAppClose(callback: () => void): () => void {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
   });
 
-  // 4. Fallback: событие beforeunload (перед закрытием страницы, работает только на десктопе)
   const handleBeforeUnload = () => {
     console.log('📱 App close event detected (beforeunload)');
     callOnce();
@@ -196,7 +189,6 @@ export function onAppClose(callback: () => void): () => void {
     window.removeEventListener('beforeunload', handleBeforeUnload);
   });
 
-  // Возвращаем функцию для отписки от всех событий
   return () => {
     console.log('🔕 Cleaning up app close handlers');
     cleanupFunctions.forEach(cleanup => cleanup());

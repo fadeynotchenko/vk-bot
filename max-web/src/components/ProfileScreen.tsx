@@ -184,7 +184,6 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
     setLoading(true);
     setError(null);
 
-    // Загружаем карточки из кеша (или загружаем, если кеша нет)
     userCardsCache
       .getUserCards(user.id)
       .then((data) => {
@@ -204,7 +203,6 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
         }
       });
 
-    // Подписываемся на изменения кеша для реактивного обновления
     const unsubscribe = userCardsCache.subscribe((userId, cachedCards) => {
       if (userId === user.id && isMounted) {
         setCards(cachedCards);
@@ -293,7 +291,7 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
               setError(null);
               setLoading(true);
               userCardsCache
-                .getUserCards(user.id, true) // Принудительно обновляем кеш
+                .getUserCards(user.id, true)
                 .then((data) => {
                   setCards(data);
                 })

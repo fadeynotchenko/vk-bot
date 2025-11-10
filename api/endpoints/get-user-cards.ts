@@ -16,18 +16,24 @@ export async function handleGetUserCards(req: FastifyRequest, reply: FastifyRepl
     const userIdStr = query.user_id;
 
     if (!userIdStr) {
+      req.log.warn({ method: 'getUserCards' }, 'getUserCards: missing user_id query parameter');
       return reply.code(400).send({ ok: false, error: 'user_id query parameter is required' });
     }
 
     const userId = Number(userIdStr);
     if (isNaN(userId) || userId <= 0) {
+      req.log.warn({ method: 'getUserCards', user_id: userIdStr }, 'getUserCards: invalid user_id');
       return reply.code(400).send({ ok: false, error: 'user_id must be a positive number' });
     }
 
     const cards = await getUserMaxCards(userId);
+    
+    req.log.info({ method: 'getUserCards', user_id: userId, count: cards.length }, `Successfully executed getUserCards for user: ${userId}`);
+    
     return reply.code(200).send({ ok: true, data: cards });
   } catch (e: any) {
-    req.log.error(e);
+    const query = req.query as { user_id?: string };
+    req.log.error({ method: 'getUserCards', user_id: query.user_id, error: e?.message, stack: e?.stack }, `Error executing getUserCards: ${e?.message ?? 'Unknown error'}`);
     return reply.code(500).send({ ok: false, error: e?.message ?? 'Unknown error' });
   }
 }

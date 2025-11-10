@@ -22,17 +22,10 @@ export async function notifyAppClose(userId: number, useBeacon: boolean = true):
     user_id: userId,
   };
 
-  // Используем sendBeacon для надежной отправки при закрытии приложения
-  // sendBeacon гарантирует отправку данных даже при закрытии страницы
   if (useBeacon && navigator.sendBeacon) {
     try {
-      // sendBeacon требует FormData или Blob
-      // Используем FormData для лучшей совместимости с сервером
       const formData = new FormData();
       formData.append('user_id', userId.toString());
-      
-      // Альтернатива: можно использовать Blob с правильным content-type
-      // const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
       
       const url = `${API}/on-app-close`;
       const sent = navigator.sendBeacon(url, formData);
@@ -45,11 +38,9 @@ export async function notifyAppClose(userId: number, useBeacon: boolean = true):
       }
     } catch (error) {
       console.error(`❌ sendBeacon error for user ${userId}:`, error);
-      // Продолжаем с fetch как fallback
     }
   }
 
-  // Fallback: используем fetch с keepalive для надежности
   try {
     const response = await fetch(`${API}/on-app-close`, {
       method: 'POST',
@@ -57,7 +48,7 @@ export async function notifyAppClose(userId: number, useBeacon: boolean = true):
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-      keepalive: true, // Важно: позволяет запросу завершиться даже при закрытии страницы
+      keepalive: true,
     });
 
     if (!response.ok) {
@@ -73,7 +64,6 @@ export async function notifyAppClose(userId: number, useBeacon: boolean = true):
     console.log(`✅ App close notification sent successfully for user ${userId}`);
   } catch (error) {
     console.error(`❌ Failed to notify app close for user ${userId}:`, error);
-    // Не пробрасываем ошибку, чтобы не нарушить процесс закрытия приложения
   }
 }
 

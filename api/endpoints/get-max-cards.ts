@@ -10,9 +10,12 @@ import { getMaxCards } from '../../db/db-card-utils.ts';
 export async function handleGetMaxCards(req: FastifyRequest, reply: FastifyReply) {
   try {
     const cards = await getMaxCards();
+    
+    req.log.info({ method: 'getMaxCards', count: cards.length }, 'Successfully executed getMaxCards');
+    
     return reply.code(200).send({ ok: true, data: cards });
   } catch (e: any) {
-    req.log.error(e);
+    req.log.error({ method: 'getMaxCards', error: e?.message, stack: e?.stack }, `Error executing getMaxCards: ${e?.message ?? 'Unknown error'}`);
     return reply.code(500).send({ ok: false, error: e?.message ?? 'Unknown error' });
   }
 }

@@ -45,21 +45,11 @@ export async function handleCreateMaxCard(req: FastifyRequest, reply: FastifyRep
           filename: part.filename || 'unknown',
           mimetype: part.mimetype || 'application/octet-stream',
         };
-        
-        req.log.info(
-          {
-            filename: imageFile.filename,
-            mimetype: imageFile.mimetype,
-            size: `${(imageFile.buffer.length / 1024).toFixed(2)} KB`,
-          },
-          '📸 Изображение получено'
-        );
       } else {
         fields[part.fieldname] = part.value as string;
       }
     }
 
-    // Валидация обязательных полей
     for (const field of REQUIRED_FIELDS) {
       const value = fields[field];
       if (!ensureString(value) || value.trim().length === 0) {
@@ -67,27 +57,11 @@ export async function handleCreateMaxCard(req: FastifyRequest, reply: FastifyRep
       }
     }
 
-    // Конвертируем изображение в base64 и логируем
     let imageBase64: string | undefined;
     if (imageFile) {
       imageBase64 = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString('base64')}`;
-      
-      req.log.info(
-        {
-          filename: imageFile.filename,
-          mimetype: imageFile.mimetype,
-          sizeBytes: imageFile.buffer.length,
-          sizeKB: (imageFile.buffer.length / 1024).toFixed(2),
-          sizeMB: (imageFile.buffer.length / (1024 * 1024)).toFixed(2),
-          base64Length: imageBase64.length,
-        },
-        '✅ Изображение успешно получено и конвертировано в base64'
-      );
-    } else {
-      req.log.warn('⚠️ Изображение не было загружено');
     }
 
-    // Извлекаем user_id, если он передан
     let userId: number | undefined;
     if (fields.user_id) {
       const parsedUserId = Number(fields.user_id);
@@ -109,9 +83,11 @@ export async function handleCreateMaxCard(req: FastifyRequest, reply: FastifyRep
 
     const card = await createMaxCard(payload);
     
+    req.log.info({ method: 'createMaxCard', user_id: userId, card_id: card.id }, `Successfully executed createMaxCard for user: ${userId ?? 'anonymous'}`);
+    
     return reply.code(201).send({ ok: true, data: card });
   } catch (e: any) {
-    req.log.error(e);
+    req.log.error({ method: 'createMaxCard', error: e?.message, stack: e?.stack }, `Error executing createMaxCard: ${e?.message ?? 'Unknown error'}`);
     return reply.code(500).send({ ok: false, error: e?.message ?? 'Unknown error' });
   }
 }

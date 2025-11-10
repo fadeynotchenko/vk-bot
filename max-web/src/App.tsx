@@ -44,7 +44,6 @@ export default function App() {
   useEffect(() => {
     let isMounted = true;
 
-    // Загружаем карточки и просмотренные карточки параллельно
     const maxUser = getMaxUser();
 
     Promise.all([
@@ -90,7 +89,6 @@ export default function App() {
     }
   }, [activeTab]);
 
-  // Обработка закрытия мини-приложения
   useEffect(() => {
     const maxUser = getMaxUser();
     if (!maxUser?.id) {
@@ -115,16 +113,13 @@ export default function App() {
     scrollContainerRef.current?.scrollTo({ top: 0 });
   }, [activeTab, selectedCard]);
 
-  // Отслеживание открытия карточки
   useEffect(() => {
     if (!selectedCard) return;
 
     const cardId = selectedCard.id;
     const maxUser = getMaxUser();
 
-    // Реактивно добавляем в стейт сразу для мгновенного обновления UI
     setViewedCardIds((prev) => {
-      // Если уже просмотрено, не обновляем стейт
       if (prev.has(cardId)) {
         return prev;
       }
@@ -133,7 +128,6 @@ export default function App() {
       return newSet;
     });
 
-    // Увеличиваем локальный счётчик просмотров
     setCardViewCounts((prev) => {
       const newMap = new Map(prev);
       const currentCount = newMap.get(cardId) || 0;
@@ -141,14 +135,12 @@ export default function App() {
       return newMap;
     });
 
-    // Сохраняем в БД асинхронно
     if (maxUser?.id) {
       trackCardViewFromUI({
         card_id: cardId,
         user_id: maxUser.id,
       })
         .then((viewCount) => {
-          // Обновляем локальный стейт с актуальным значением из БД
           setCardViewCounts((prev) => {
             const newMap = new Map(prev);
             newMap.set(cardId, viewCount);
@@ -157,7 +149,6 @@ export default function App() {
         })
         .catch((err) => {
           console.error('Failed to track card view:', err);
-          // В случае ошибки откатываем изменение в стейте
           setViewedCardIds((prev) => {
             const newSet = new Set(prev);
             newSet.delete(cardId);

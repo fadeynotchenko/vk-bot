@@ -266,7 +266,6 @@ export function CreateInitiativeScreen({ onBack }: CreateInitiativeScreenProps) 
     setSubmitError(null);
 
     try {
-      // Получаем ID пользователя из MAX Bridge
       const maxUser = getMaxUser();
       
       const payload = {
@@ -281,21 +280,16 @@ export function CreateInitiativeScreen({ onBack }: CreateInitiativeScreenProps) 
       };
       const createdCard = await createMaxCardFromUI(payload);
 
-      // Инвалидируем кеш, чтобы новые карточки появились реактивно
-      // (даже если карточка на модерации, обновляем кеш для будущих обновлений)
       if (maxUser?.id) {
-        // Если карточка уже принята (статус accepted), добавляем её в кеш оптимистично
         if (createdCard.status === 'accepted') {
           userCardsCache.addCardToCache(maxUser.id, createdCard);
         } else {
-          // Иначе просто инвалидируем кеш для следующей загрузки
           userCardsCache.invalidateUserCache(maxUser.id).catch((err) => {
             console.error('Failed to invalidate cache:', err);
           });
         }
       }
 
-      // Очищаем форму
       setCategory(categoryOptions[0]?.value ?? '');
       setTitle('');
       setShortDescription('');
@@ -310,7 +304,6 @@ export function CreateInitiativeScreen({ onBack }: CreateInitiativeScreenProps) 
         return null;
       });
 
-      // Показываем алерт о модерации
       setShowModerationAlert(true);
     } catch (error) {
       const message =

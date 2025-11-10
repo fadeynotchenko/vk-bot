@@ -1,75 +1,68 @@
 import type { Bot } from '@maxhub/max-bot-api';
 import { getUserTotalViewCount } from '../../db/db-card-views-utils.ts';
+import { getLastViewCount, saveLastViewCount } from '../../db/db-user-utils.ts';
 
-// Пороги для отправки мотивационных сообщений
-const MOTIVATION_THRESHOLDS = [3, 5, 10, 20] as const;
+const MOTIVATION_MESSAGES: readonly string[] = [
+  'Продолжайте исследовать инициативы — каждая может стать вашим шансом помочь!',
+  'Ваш интерес к добрым делам вдохновляет! Не останавливайтесь на достигнутом.',
+  'Каждая просмотренная инициатива — это шаг к реальной помощи. Продолжайте в том же духе!',
+  'Вы на правильном пути! Откликайтесь на инициативы, которые вам близки, и делайте мир лучше.',
+];
 
-/**
- * Генерирует мотивационное сообщение на основе общего количества просмотров.
- */
-function getMotivationalMessage(totalViewCount: number): string {
-  switch (totalViewCount) {
-    case 3:
-      return '🎉 Отлично! Вы уже просмотрели 3 инициативы. Продолжайте исследовать возможности помочь!';
-    case 5:
-      return '🌟 Превосходно! 5 просмотренных инициатив — вы на правильном пути к добрым делам!';
-    case 10:
-      return '💫 Невероятно! 10 инициатив — вы настоящий активист добра! Спасибо за вашу активность!';
-    case 20:
-      return '🏆 Потрясающе! 20 инициатив — вы вдохновляете других на добрые дела! Продолжайте в том же духе!';
-    default:
-      return `👍 Спасибо за интерес к инициативам! Вы уже просмотрели ${totalViewCount} карточек.`;
-  }
+function getRandomMotivation(): string {
+  const randomIndex = Math.floor(Math.random() * MOTIVATION_MESSAGES.length);
+  return MOTIVATION_MESSAGES[randomIndex] ?? MOTIVATION_MESSAGES[0]!;
+}
+
+function formatViewCount(count: number): string {
+  if (count === 0) return '0';
+  if (count === 1) return '1 инициативу';
+  if (count >= 2 && count <= 4) return `${count} инициативы`;
+  return `${count} инициатив`;
 }
 
 /**
- * Проверяет, нужно ли отправить мотивационное сообщение пользователю при закрытии мини-приложения.
+ * Генерирует мотивационное сообщение со статистикой просмотров.
  * 
- * Использует метод библиотеки @maxhub/max-bot-api: bot.api.sendMessageToUser()
- * согласно документации: https://dev.max.ru/docs-api/methods/POST/messages
+ * @param viewsThisSession - количество просмотров за текущую сессию
+ * @param totalViews - общее количество просмотров
+ * @returns Сформированное сообщение
+ */
+function generateMotivationalMessage(viewsThisSession: number, totalViews: number): string {
+  const viewsThisSessionText = formatViewCount(viewsThisSession);
+  const totalViewsText = formatViewCount(totalViews);
+  const motivation = getRandomMotivation();
+  
+  if (viewsThisSession === 0) {
+    return `📊 Статистика:\nЗа эту сессию: 0 просмотров\nВсего просмотрено: ${totalViewsText}\n\n${motivation}`;
+  }
+  
+  return `📊 Статистика:\nЗа эту сессию: ${viewsThisSessionText}\nВсего просмотрено: ${totalViewsText}\n\n${motivation}`;
+}
+
+/**
+ * Проверяет и отправляет мотивационное сообщение пользователю при закрытии мини-приложения.
+ * 
+ * Отправляет сообщение со статистикой: сколько просмотрено за эту сессию и всего.
+ * Включает случайную мотивацию из 3-4 вариантов.
  * 
  * @param bot - экземпляр бота для отправки сообщений
  * @param userId - ID пользователя MAX
- * 
- * Получает общее количество просмотров пользователя и отправляет мотивационное сообщение,
- * если достигнут один из порогов (3, 5, 10, 20 просмотров всех карточек).
  */
 export async function checkAndSendMotivationalMessage(bot: Bot, userId: number): Promise<void> {
   try {
-    console.log(`🔍 Checking motivational message for user ${userId}...`);
-    
-    const totalViewCount = await getUserTotalViewCount(userId);
-    console.log(`📊 User ${userId} has ${totalViewCount} total views`);
+    const [totalViewCount, lastViewCount] = await Promise.all([
+      getUserTotalViewCount(userId),
+      getLastViewCount(userId),
+    ]);
 
-    if (!MOTIVATION_THRESHOLDS.includes(totalViewCount as typeof MOTIVATION_THRESHOLDS[number])) {
-      console.log(`⏭️ User ${userId} has ${totalViewCount} views, which is not a threshold (${MOTIVATION_THRESHOLDS.join(', ')})`);
-      return;
-    }
-
-    const message = getMotivationalMessage(totalViewCount);
-    console.log(`📝 Prepared message for user ${userId}: "${message.substring(0, 50)}..."`);
+    const viewsThisSession = Math.max(0, totalViewCount - lastViewCount);
     
-    // Используем метод библиотеки согласно документации
-    console.log(`📤 Attempting to send message to user ${userId}...`);
-    const result = await bot.api.sendMessageToUser(userId, message);
+    const message = generateMotivationalMessage(viewsThisSession, totalViewCount);
     
-    console.log(`✅ Motivational message sent to user ${userId} (total views: ${totalViewCount})`);
-    console.log(`📨 Message result:`, result);
+    await bot.api.sendMessageToUser(userId, message);
+    await saveLastViewCount(userId, totalViewCount);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    
-    console.error(`❌ Failed to check/send motivational message for user ${userId}:`, errorMessage);
-    if (errorStack) {
-      console.error(`Stack trace:`, errorStack);
-    }
-    
-    // Логируем полную информацию об ошибке для отладки
-    if (error && typeof error === 'object') {
-      console.error(`Error details:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    }
-    
-    // Пробрасываем ошибку, чтобы она была залогирована на уровне выше
     throw error;
   }
 }

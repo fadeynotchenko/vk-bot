@@ -26,21 +26,17 @@ class UserCardsCacheManager {
     const cached = this.cache[userId];
     const now = Date.now();
 
-    // Если есть валидный кеш и не требуется принудительное обновление
     if (!forceRefresh && cached && (now - cached.timestamp) < this.CACHE_TTL) {
       return cached.cards;
     }
 
-    // Загружаем данные
     const cards = await fetchUserCardsFromUI(userId);
     
-    // Обновляем кеш
     this.cache[userId] = {
       cards,
       timestamp: now,
     };
 
-    // Уведомляем подписчиков
     this.notifyListeners(userId, cards);
 
     return cards;
@@ -65,7 +61,6 @@ class UserCardsCacheManager {
   addCardToCache(userId: number, card: MaxCard): void {
     const cached = this.cache[userId];
     if (cached) {
-      // Проверяем, нет ли уже такой карточки
       if (!cached.cards.some((c) => c.id === card.id)) {
         cached.cards = [card, ...cached.cards];
         cached.timestamp = Date.now();
@@ -114,6 +109,5 @@ class UserCardsCacheManager {
   }
 }
 
-// Экспортируем singleton
 export const userCardsCache = new UserCardsCacheManager();
 

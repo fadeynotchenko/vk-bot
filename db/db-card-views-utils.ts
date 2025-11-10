@@ -23,14 +23,12 @@ type CardViewDocument = {
  * В случае ошибки пробрасывает исключение MongoDB.
  */
 export async function trackCardView(cardId: string, userId: number): Promise<number> {
-  // Сначала проверяем, существует ли документ
   const existing = await db.collection<CardViewDocument>('card_views').findOne({
     card_id: cardId,
     user_id: userId,
   });
 
   if (existing) {
-    // Если документ существует, увеличиваем счётчик
     const result = await db.collection<CardViewDocument>('card_views').findOneAndUpdate(
       {
         card_id: cardId,
@@ -50,7 +48,6 @@ export async function trackCardView(cardId: string, userId: number): Promise<num
     );
     return result?.view_count ?? existing.view_count + 1;
   } else {
-    // Если документа нет, создаём новый со счётчиком = 1
     const result = await db.collection<CardViewDocument>('card_views').findOneAndUpdate(
       {
         card_id: cardId,

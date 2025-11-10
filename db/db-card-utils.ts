@@ -25,13 +25,9 @@ type InsertableMaxCardDocument = OptionalUnlessRequiredId<MaxCardDocument>;
 export async function getMaxCards(): Promise<MaxCard[]> {
   const cardsCollection = db.collection<MaxCardDocument>('max_cards');
 
-  // Используем aggregation pipeline для оптимизированного получения счетчиков просмотров
   const pipeline = [
-    // Шаг 1: Фильтруем только принятые карточки
     { $match: { status: 'accepted' } },
-    // Шаг 2: Сортируем по дате
     { $sort: { date: -1 } },
-    // Шаг 3: Lookup для получения счетчиков просмотров
     {
       $lookup: {
         from: 'card_views',
@@ -54,7 +50,6 @@ export async function getMaxCards(): Promise<MaxCard[]> {
         as: 'viewStats',
       },
     },
-    // Шаг 4: Добавляем поле view_count
     {
       $addFields: {
         view_count: {
@@ -62,7 +57,6 @@ export async function getMaxCards(): Promise<MaxCard[]> {
         },
       },
     },
-    // Шаг 5: Удаляем временное поле viewStats
     {
       $project: {
         viewStats: 0,
@@ -103,13 +97,9 @@ export async function getMaxCards(): Promise<MaxCard[]> {
 export async function getUserMaxCards(userId: number): Promise<MaxCard[]> {
   const cardsCollection = db.collection<MaxCardDocument>('max_cards');
 
-  // Используем aggregation pipeline для оптимизированного получения счетчиков просмотров
   const pipeline = [
-    // Шаг 1: Фильтруем карточки пользователя
     { $match: { user_id: userId } },
-    // Шаг 2: Сортируем по дате
     { $sort: { date: -1 } },
-    // Шаг 3: Lookup для получения счетчиков просмотров
     {
       $lookup: {
         from: 'card_views',
@@ -132,7 +122,6 @@ export async function getUserMaxCards(userId: number): Promise<MaxCard[]> {
         as: 'viewStats',
       },
     },
-    // Шаг 4: Добавляем поле view_count
     {
       $addFields: {
         view_count: {
@@ -140,7 +129,6 @@ export async function getUserMaxCards(userId: number): Promise<MaxCard[]> {
         },
       },
     },
-    // Шаг 5: Удаляем временное поле viewStats
     {
       $project: {
         viewStats: 0,

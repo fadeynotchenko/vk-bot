@@ -24,14 +24,17 @@ export async function handleTrackCardView(req: FastifyRequest<{ Body: TrackCardV
     const { card_id, user_id } = req.body;
 
     if (!card_id || !user_id) {
+      req.log.warn({ card_id, user_id }, 'trackCardView: missing required fields');
       return reply.code(400).send({ ok: false, error: 'card_id and user_id are required' });
     }
 
     const viewCount = await trackCardView(card_id, user_id);
 
+    req.log.info({ method: 'trackCardView', user_id, card_id, view_count: viewCount }, `Successfully executed trackCardView for user: ${user_id}`);
+
     return reply.code(200).send({ ok: true, view_count: viewCount });
   } catch (e: any) {
-    req.log.error(e);
+    req.log.error({ method: 'trackCardView', error: e?.message, stack: e?.stack }, `Error executing trackCardView: ${e?.message ?? 'Unknown error'}`);
     return reply.code(500).send({ ok: false, error: e?.message ?? 'Unknown error' });
   }
 }
