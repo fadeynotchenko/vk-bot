@@ -13,19 +13,65 @@ type InsertableMaxCardDocument = OptionalUnlessRequiredId<MaxCardDocument>;
 
 /**
  * Загружает все карточки инициатив из MongoDB со статусом "accepted" и приводит документы к DTO для UI.
+ * Оптимизированно получает счетчики просмотров через MongoDB aggregation pipeline.
  * 
  * Карточки сортируются по дате создания в порядке убывания (самые новые первыми).
  * 
- * @returns Массив карточек со статусом "accepted" в формате MaxCard
+ * @returns Массив карточек со статусом "accepted" в формате MaxCard с включенными счетчиками просмотров
  * 
  * Успешное выполнение возвращает массив карточек в удобном формате.
  * В случае ошибки пробрасывает исключение MongoDB, чтобы вызывающий код обработал его.
  */
 export async function getMaxCards(): Promise<MaxCard[]> {
-  const docs = await db.collection<MaxCardDocument>('max_cards')
-    .find({ status: 'accepted' })
-    .sort({ date: -1 })
-    .toArray();
+  const cardsCollection = db.collection<MaxCardDocument>('max_cards');
+
+  // Используем aggregation pipeline для оптимизированного получения счетчиков просмотров
+  const pipeline = [
+    // Шаг 1: Фильтруем только принятые карточки
+    { $match: { status: 'accepted' } },
+    // Шаг 2: Сортируем по дате
+    { $sort: { date: -1 } },
+    // Шаг 3: Lookup для получения счетчиков просмотров
+    {
+      $lookup: {
+        from: 'card_views',
+        let: { cardId: { $toString: '$_id' } },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ['$card_id', '$$cardId'],
+              },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalViews: { $sum: '$view_count' },
+            },
+          },
+        ],
+        as: 'viewStats',
+      },
+    },
+    // Шаг 4: Добавляем поле view_count
+    {
+      $addFields: {
+        view_count: {
+          $ifNull: [{ $arrayElemAt: ['$viewStats.totalViews', 0] }, 0],
+        },
+      },
+    },
+    // Шаг 5: Удаляем временное поле viewStats
+    {
+      $project: {
+        viewStats: 0,
+      },
+    },
+  ];
+
+  const docs = await cardsCollection.aggregate(pipeline).toArray();
+
   return docs.map((doc) => ({
     id: doc._id ? doc._id.toString() : '',
     category: doc.category,
@@ -34,6 +80,7 @@ export async function getMaxCards(): Promise<MaxCard[]> {
     text: doc.text,
     status: doc.status,
     date: doc.date.toISOString(),
+    view_count: doc.view_count ?? 0,
     ...(doc.link ? { link: doc.link } : {}),
     ...(doc.image ? { image: doc.image } : {}),
     ...(doc.user_id ? { user_id: doc.user_id } : {}),
@@ -43,20 +90,66 @@ export async function getMaxCards(): Promise<MaxCard[]> {
 /**
  * Загружает все карточки инициатив пользователя по user_id из MongoDB.
  * Возвращает карточки со всеми статусами (moderate, accepted, rejected).
+ * Оптимизированно получает счетчики просмотров через MongoDB aggregation pipeline.
  * 
  * Карточки сортируются по дате создания в порядке убывания (самые новые первыми).
  * 
  * @param userId - ID пользователя MAX
- * @returns Массив карточек пользователя в формате MaxCard
+ * @returns Массив карточек пользователя в формате MaxCard с включенными счетчиками просмотров
  * 
  * Успешное выполнение возвращает массив карточек в удобном формате.
  * В случае ошибки пробрасывает исключение MongoDB, чтобы вызывающий код обработал его.
  */
 export async function getUserMaxCards(userId: number): Promise<MaxCard[]> {
-  const docs = await db.collection<MaxCardDocument>('max_cards')
-    .find({ user_id: userId })
-    .sort({ date: -1 })
-    .toArray();
+  const cardsCollection = db.collection<MaxCardDocument>('max_cards');
+
+  // Используем aggregation pipeline для оптимизированного получения счетчиков просмотров
+  const pipeline = [
+    // Шаг 1: Фильтруем карточки пользователя
+    { $match: { user_id: userId } },
+    // Шаг 2: Сортируем по дате
+    { $sort: { date: -1 } },
+    // Шаг 3: Lookup для получения счетчиков просмотров
+    {
+      $lookup: {
+        from: 'card_views',
+        let: { cardId: { $toString: '$_id' } },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ['$card_id', '$$cardId'],
+              },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalViews: { $sum: '$view_count' },
+            },
+          },
+        ],
+        as: 'viewStats',
+      },
+    },
+    // Шаг 4: Добавляем поле view_count
+    {
+      $addFields: {
+        view_count: {
+          $ifNull: [{ $arrayElemAt: ['$viewStats.totalViews', 0] }, 0],
+        },
+      },
+    },
+    // Шаг 5: Удаляем временное поле viewStats
+    {
+      $project: {
+        viewStats: 0,
+      },
+    },
+  ];
+
+  const docs = await cardsCollection.aggregate(pipeline).toArray();
+
   return docs.map((doc) => ({
     id: doc._id ? doc._id.toString() : '',
     category: doc.category,
@@ -65,6 +158,7 @@ export async function getUserMaxCards(userId: number): Promise<MaxCard[]> {
     text: doc.text,
     status: doc.status,
     date: doc.date.toISOString(),
+    view_count: doc.view_count ?? 0,
     ...(doc.link ? { link: doc.link } : {}),
     ...(doc.image ? { image: doc.image } : {}),
     ...(doc.user_id ? { user_id: doc.user_id } : {}),

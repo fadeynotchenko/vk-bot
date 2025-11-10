@@ -238,7 +238,7 @@ export default function App() {
             fontWeight: 700,
           }}
         >
-          Добрая душа
+          Добрая душа.ru
         </Typography.Title>
         <div style={listAreaStyle}>
           {error ? (

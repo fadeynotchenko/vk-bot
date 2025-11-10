@@ -36,22 +36,41 @@ function getMotivationalMessage(totalViewCount: number): string {
  */
 export async function checkAndSendMotivationalMessage(bot: Bot, userId: number): Promise<void> {
   try {
+    console.log(`🔍 Checking motivational message for user ${userId}...`);
+    
     const totalViewCount = await getUserTotalViewCount(userId);
+    console.log(`📊 User ${userId} has ${totalViewCount} total views`);
 
     if (!MOTIVATION_THRESHOLDS.includes(totalViewCount as typeof MOTIVATION_THRESHOLDS[number])) {
+      console.log(`⏭️ User ${userId} has ${totalViewCount} views, which is not a threshold (${MOTIVATION_THRESHOLDS.join(', ')})`);
       return;
     }
 
     const message = getMotivationalMessage(totalViewCount);
+    console.log(`📝 Prepared message for user ${userId}: "${message.substring(0, 50)}..."`);
     
     // Используем метод библиотеки согласно документации
-    await bot.api.sendMessageToUser(userId, message);
-
+    console.log(`📤 Attempting to send message to user ${userId}...`);
+    const result = await bot.api.sendMessageToUser(userId, message);
+    
     console.log(`✅ Motivational message sent to user ${userId} (total views: ${totalViewCount})`);
+    console.log(`📨 Message result:`, result);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     console.error(`❌ Failed to check/send motivational message for user ${userId}:`, errorMessage);
-    // Не пробрасываем ошибку, чтобы не нарушить основной поток
+    if (errorStack) {
+      console.error(`Stack trace:`, errorStack);
+    }
+    
+    // Логируем полную информацию об ошибке для отладки
+    if (error && typeof error === 'object') {
+      console.error(`Error details:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    }
+    
+    // Пробрасываем ошибку, чтобы она была залогирована на уровне выше
+    throw error;
   }
 }
 

@@ -60,7 +60,7 @@ const heroImageStyle: CSSProperties = {
 const heroGradientStyle: CSSProperties = {
   position: 'absolute',
   inset: 0,
-  background: 'linear-gradient(180deg, rgba(14,23,38,0) 35%, rgba(14,23,38,0.92) 100%)',
+  background: 'linear-gradient(180deg, rgba(0,0,0,0) 20%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.98) 100%)',
 };
 
 const heroContentStyle: CSSProperties = {
@@ -102,8 +102,27 @@ const infoTextStyle: CSSProperties = {
   lineHeight: 1.65,
 };
 
+const viewCountStyle: CSSProperties = {
+  position: 'absolute',
+  top: 16,
+  left: 16,
+  zIndex: 2,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  borderRadius: 999,
+  padding: '8px 14px',
+  fontSize: 14,
+  fontWeight: 600,
+  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  color: '#ffffff',
+  backdropFilter: 'blur(8px)',
+};
+
 export function MaxCardDetail({ card, onBack }: MaxCardDetailProps) {
   const formattedDate = formatCardDate(card.date);
+  const viewCount = card.view_count ?? 0;
 
   return (
     <div style={wrapperStyle}>
@@ -119,6 +138,14 @@ export function MaxCardDetail({ card, onBack }: MaxCardDetailProps) {
           <div style={heroMediaStyle} />
         )}
         <div style={heroGradientStyle} />
+        {viewCount > 0 && (
+          <div style={viewCountStyle}>
+            <span>👁</span>
+            <span>
+              {viewCount} {viewCount === 1 ? 'просмотр' : viewCount < 5 ? 'просмотра' : 'просмотров'}
+            </span>
+          </div>
+        )}
         <div style={heroContentStyle}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {card.category && (
@@ -132,11 +159,11 @@ export function MaxCardDetail({ card, onBack }: MaxCardDetailProps) {
               </Typography.Label>
             )}
           </div>
-          <Typography.Title style={{ margin: 0, fontSize: 30, lineHeight: 1.2 }}>
+          <Typography.Title style={{ margin: 0, fontSize: 26, lineHeight: 1.2 }}>
             {card.title}
           </Typography.Title>
           {card.subtitle && (
-            <Typography.Body style={{ color: colors.textSecondary }}>
+            <Typography.Body style={{ color: colors.textSecondary, fontSize: 15 }}>
               {card.subtitle}
             </Typography.Body>
           )}

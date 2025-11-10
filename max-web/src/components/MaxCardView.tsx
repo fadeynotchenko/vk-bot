@@ -54,7 +54,7 @@ const imageStyle: CSSProperties = {
 const gradientOverlayStyle: CSSProperties = {
   position: 'absolute',
   inset: 0,
-  background: 'linear-gradient(180deg, rgba(10,19,34,0) 30%, rgba(10,19,34,0.85) 100%)',
+  background: 'linear-gradient(180deg, rgba(0,0,0,0) 20%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.95) 100%)',
 };
 
 const contentOverlayStyle: CSSProperties = {
@@ -87,8 +87,27 @@ const viewedBadgeStyle: CSSProperties = {
   color: '#ffffff',
 };
 
+const viewCountStyle: CSSProperties = {
+  position: 'absolute',
+  top: 16,
+  left: 16,
+  zIndex: 2,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
+  borderRadius: 999,
+  padding: '6px 12px',
+  fontSize: 13,
+  fontWeight: 600,
+  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  color: '#ffffff',
+  backdropFilter: 'blur(8px)',
+};
+
 export function MaxCardView({ card, onOpen, isViewed }: MaxCardViewProps) {
   const formattedDate = formatCardDate(card.date);
+  const viewCount = card.view_count ?? 0;
 
   return (
     <button type="button" onClick={() => onOpen(card)} style={buttonStyle}>
@@ -99,6 +118,12 @@ export function MaxCardView({ card, onOpen, isViewed }: MaxCardViewProps) {
           <div style={mediaStyle} />
         )}
         <div style={gradientOverlayStyle} />
+        {viewCount > 0 && (
+          <div style={viewCountStyle}>
+            <span>👁</span>
+            <span>{viewCount}</span>
+          </div>
+        )}
         {isViewed && (
           <div style={viewedBadgeStyle}>
             Просмотрено

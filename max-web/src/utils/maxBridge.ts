@@ -100,33 +100,106 @@ export function isMaxBridgeAvailable(): boolean {
 
 /**
  * Подписывается на событие закрытия мини-приложения.
- * Вызывает callback при закрытии приложения (viewportChanged с isStateVisible: false).
+ * Использует несколько механизмов для надежного отслеживания закрытия:
+ * 1. MAX Bridge событие viewportChanged с isStateVisible: false (основной способ)
+ * 2. Событие pagehide браузера (надежнее beforeunload для мобильных)
+ * 3. Событие visibilitychange браузера (fallback)
+ * 4. Событие beforeunload браузера (fallback для десктопа)
  * 
  * @param callback - функция, которая будет вызвана при закрытии приложения
- * @returns функция для отписки от события
+ * @returns функция для отписки от всех событий
  */
 export function onAppClose(callback: () => void): () => void {
-  if (!window.WebApp?.onEvent) {
-    console.warn('⚠️ MAX Bridge onEvent is not available');
-    return () => {};
-  }
-
-  const handleViewportChanged = (data: any) => {
-    // Событие viewportChanged с isStateVisible: false означает закрытие мини-приложения
-    if (data?.isStateVisible === false) {
-      console.log('📱 App close event detected (viewportChanged with isStateVisible: false)');
+  let hasCalled = false; // Защита от множественных вызовов
+  const callOnce = () => {
+    if (hasCalled) {
+      console.log('⚠️ App close callback already called, skipping duplicate call');
+      return;
+    }
+    hasCalled = true;
+    console.log('📱 Calling app close callback');
+    try {
       callback();
+    } catch (error) {
+      console.error('❌ Error in app close callback:', error);
     }
   };
 
-  // Подписываемся на событие viewportChanged
-  window.WebApp.onEvent('viewportChanged', handleViewportChanged);
+  const cleanupFunctions: Array<() => void> = [];
 
-  // Возвращаем функцию для отписки
-  return () => {
-    if (window.WebApp?.offEvent) {
-      window.WebApp.offEvent('viewportChanged', handleViewportChanged);
+  // 1. MAX Bridge событие viewportChanged (основной способ для MAX)
+  if (window.WebApp?.onEvent) {
+    const handleViewportChanged = (data: any) => {
+      console.log('🔔 viewportChanged event received:', data);
+      // Событие viewportChanged с isStateVisible: false означает закрытие мини-приложения
+      if (data?.isStateVisible === false) {
+        console.log('📱 App close event detected (viewportChanged with isStateVisible: false)');
+        callOnce();
+      }
+    };
+
+    try {
+      window.WebApp.onEvent('viewportChanged', handleViewportChanged);
+      console.log('✅ Subscribed to viewportChanged event');
+      cleanupFunctions.push(() => {
+        if (window.WebApp?.offEvent) {
+          window.WebApp.offEvent('viewportChanged', handleViewportChanged);
+          console.log('🔕 Unsubscribed from viewportChanged event');
+        }
+      });
+    } catch (error) {
+      console.error('❌ Failed to subscribe to viewportChanged event:', error);
     }
+  } else {
+    console.warn('⚠️ MAX Bridge onEvent is not available, using browser events only');
+  }
+
+  // 2. Событие pagehide (надежнее beforeunload, особенно на мобильных)
+  const handlePageHide = (event: PageTransitionEvent) => {
+    // pagehide с persisted: false означает, что страница действительно закрывается
+    if (!event.persisted) {
+      console.log('📱 App close event detected (pagehide)');
+      callOnce();
+    } else {
+      console.log('📱 Page hidden but persisted (likely cached), not treating as close');
+    }
+  };
+  window.addEventListener('pagehide', handlePageHide);
+  cleanupFunctions.push(() => {
+    window.removeEventListener('pagehide', handlePageHide);
+  });
+
+  // 3. Fallback: событие visibilitychange (когда страница становится скрытой)
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      console.log('📱 App close event detected (visibilitychange: hidden)');
+      // Небольшая задержка, чтобы не сработать при простом переключении вкладок
+      setTimeout(() => {
+        if (document.visibilityState === 'hidden') {
+          callOnce();
+        }
+      }, 100);
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  cleanupFunctions.push(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  });
+
+  // 4. Fallback: событие beforeunload (перед закрытием страницы, работает только на десктопе)
+  const handleBeforeUnload = () => {
+    console.log('📱 App close event detected (beforeunload)');
+    callOnce();
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  cleanupFunctions.push(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  });
+
+  // Возвращаем функцию для отписки от всех событий
+  return () => {
+    console.log('🔕 Cleaning up app close handlers');
+    cleanupFunctions.forEach(cleanup => cleanup());
   };
 }
 

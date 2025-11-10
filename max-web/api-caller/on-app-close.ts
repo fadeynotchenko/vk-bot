@@ -6,24 +6,58 @@ type OnAppCloseResponse =
 
 /**
  * Отправляет событие закрытия мини-приложения на сервер.
+ * Использует navigator.sendBeacon для надежной отправки при закрытии приложения,
+ * так как обычный fetch может быть прерван браузером.
  * 
  * @param userId - ID пользователя MAX, который закрыл мини-приложение
+ * @param useBeacon - использовать ли sendBeacon (по умолчанию true для надежности)
  * 
  * Успех: возвращает { ok: true }.
  * Ошибка HTTP или ответа `ok: false` — выбрасывает исключение с текстом ошибки.
  */
-export async function notifyAppClose(userId: number): Promise<void> {
-  console.log(`📱 Notifying server about app close for user ${userId}`);
+export async function notifyAppClose(userId: number, useBeacon: boolean = true): Promise<void> {
+  console.log(`📱 Notifying server about app close for user ${userId} (useBeacon: ${useBeacon})`);
 
+  const payload = {
+    user_id: userId,
+  };
+
+  // Используем sendBeacon для надежной отправки при закрытии приложения
+  // sendBeacon гарантирует отправку данных даже при закрытии страницы
+  if (useBeacon && navigator.sendBeacon) {
+    try {
+      // sendBeacon требует FormData или Blob
+      // Используем FormData для лучшей совместимости с сервером
+      const formData = new FormData();
+      formData.append('user_id', userId.toString());
+      
+      // Альтернатива: можно использовать Blob с правильным content-type
+      // const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      
+      const url = `${API}/on-app-close`;
+      const sent = navigator.sendBeacon(url, formData);
+      
+      if (sent) {
+        console.log(`✅ App close notification sent via sendBeacon for user ${userId}`);
+        return;
+      } else {
+        console.warn(`⚠️ sendBeacon failed for user ${userId}, falling back to fetch`);
+      }
+    } catch (error) {
+      console.error(`❌ sendBeacon error for user ${userId}:`, error);
+      // Продолжаем с fetch как fallback
+    }
+  }
+
+  // Fallback: используем fetch с keepalive для надежности
   try {
     const response = await fetch(`${API}/on-app-close`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        user_id: userId,
-      }),
+      body: JSON.stringify(payload),
+      keepalive: true, // Важно: позволяет запросу завершиться даже при закрытии страницы
     });
 
     if (!response.ok) {
@@ -31,9 +65,9 @@ export async function notifyAppClose(userId: number): Promise<void> {
       throw new Error(`Failed to notify app close: ${response.status} ${errorText}`);
     }
 
-    const payload = (await response.json()) as OnAppCloseResponse;
-    if (!payload.ok) {
-      throw new Error(payload.error || 'Failed to notify app close');
+    const result = (await response.json()) as OnAppCloseResponse;
+    if (!result.ok) {
+      throw new Error(result.error || 'Failed to notify app close');
     }
 
     console.log(`✅ App close notification sent successfully for user ${userId}`);

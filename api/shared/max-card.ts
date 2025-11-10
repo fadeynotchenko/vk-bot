@@ -9,6 +9,7 @@ export interface MaxCard {
   link?: string;
   image?: string; 
   user_id?: number;
+  view_count?: number; // Общее количество просмотров карточки всеми пользователями
 }
 
 export type MaxCardInput = Omit<MaxCard, 'id' | 'date'>;
