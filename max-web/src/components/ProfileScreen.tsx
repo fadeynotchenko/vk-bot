@@ -390,11 +390,13 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
           </div>
         ) : (
           <>
-            <CategoryFilter
-              options={STATUS_FILTERS}
-              activeValue={activeStatusFilter}
-              onChange={(value) => setActiveStatusFilter(value)}
-            />
+            <div style={{ marginTop: 12 }}>
+              <CategoryFilter
+                options={STATUS_FILTERS}
+                activeValue={activeStatusFilter}
+                onChange={(value) => setActiveStatusFilter(value)}
+              />
+            </div>
             {filteredCards.length > 0 ? (
               <div style={{ ...cardsListStyle, paddingTop: 8 }}>
                 {filteredCards.map((card) => (
