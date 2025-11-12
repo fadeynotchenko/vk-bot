@@ -110,3 +110,22 @@ export async function getLastMotivationalMessageDate(user_id: number): Promise<D
   
   return null;
 }
+
+/**
+ * Очищает данные о последнем мотивационном сообщении для пользователя.
+ * Используется при перезапуске диалога (bot_started), когда старые сообщения больше не существуют.
+ * 
+ * @param user_id - идентификатор пользователя
+ */
+export async function clearLastMotivationalMessage(user_id: number): Promise<void> {
+  await db.collection('max_users').updateOne(
+    { user_id: user_id },
+    {
+      $unset: {
+        lastMotivationalMessageId: '',
+        lastMotivationalMessageDate: '',
+      }
+    },
+    { upsert: false }
+  );
+}

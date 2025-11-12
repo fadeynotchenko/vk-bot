@@ -1,2 +1,33 @@
-.env
+# Dependencies
 node_modules/
+max-web/node_modules/
+
+# Build outputs
+dist/
+max-web/dist/
+build/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+max-web/coverage/
+.nyc_output/
+
+# Vitest
+.vitest/

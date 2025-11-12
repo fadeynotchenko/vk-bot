@@ -9,6 +9,7 @@ import { CategoryFilter, type CategoryFilterOption } from './components/Category
 import { BottomTabs, type BottomTabKey } from './components/BottomTabs';
 import { ProfileScreen } from './components/ProfileScreen';
 import { CreateInitiativeScreen } from './components/CreateInitiativeScreen';
+import { SearchBar } from './components/SearchBar';
 import { colors, layout } from './components/theme';
 import { trackCardViewFromUI } from '../api-caller/track-card-view.ts';
 import { fetchViewedCardsFromUI } from '../api-caller/get-viewed-cards.ts';
@@ -36,6 +37,7 @@ export default function App() {
   const [selectedCard, setSelectedCard] = useState<MaxCard | null>(null);
   const [activeFilter, setActiveFilter] = useState<CategoryFilterOption['value']>('all');
   const [activeTab, setActiveTab] = useState<BottomTabKey>('home');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileView, setProfileView] = useState<'overview' | 'create'>('overview');
   const [viewedCardIds, setViewedCardIds] = useState<Set<string>>(new Set());
   const [_cardViewCounts, setCardViewCounts] = useState<Map<string, number>>(new Map());
@@ -80,6 +82,7 @@ export default function App() {
     if (activeTab !== 'home') {
       setSelectedCard(null);
       setActiveFilter('all');
+      setSearchQuery('');
     }
   }, [activeTab]);
 
@@ -167,10 +170,23 @@ export default function App() {
   }, [selectedCard]);
 
   const hasAnyCards = cards.length > 0;
-  const filteredCards =
+  
+  // Фильтрация по категории
+  const categoryFilteredCards =
     activeFilter === 'all'
       ? cards
       : cards.filter((card) => card.category?.trim().toLowerCase() === activeFilter);
+  
+  // Фильтрация по поисковому запросу (название и subtitle)
+  const filteredCards = searchQuery.trim()
+    ? categoryFilteredCards.filter((card) => {
+        const query = searchQuery.trim().toLowerCase();
+        const titleMatch = card.title?.toLowerCase().includes(query);
+        const subtitleMatch = card.subtitle?.toLowerCase().includes(query);
+        return titleMatch || subtitleMatch;
+      })
+    : categoryFilteredCards;
+  
   const hasFilteredCards = filteredCards.length > 0;
 
   const pageWrapperStyle: CSSProperties = {
@@ -229,9 +245,14 @@ export default function App() {
             fontWeight: 700,
           }}
         >
-          Добрая душа.ru
+          Добрая душа
         </Typography.Title>
         <div style={listAreaStyle}>
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Поиск по названию и описанию..."
+          />
           {error ? (
             <Typography.Body
               style={{
@@ -274,7 +295,9 @@ export default function App() {
                     padding: `0 ${layout.contentXPadding}`,
                   }}
                 >
-                  Карточки с выбранным тегом не найдены
+                  {searchQuery.trim()
+                    ? 'По вашему запросу ничего не найдено'
+                    : 'Карточки с выбранным тегом не найдены'}
                 </Typography.Body>
               )}
             </>

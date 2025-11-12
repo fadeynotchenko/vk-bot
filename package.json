@@ -13,9 +13,15 @@
   "devDependencies": {
     "@types/node": "^24.10.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.8",
+    "@vitest/ui": "^2.1.8"
   },
   "scripts": {
-    "start": "ts-node bot.ts"
+    "start": "ts-node bot.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
   }
 }

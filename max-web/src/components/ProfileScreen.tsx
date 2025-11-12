@@ -150,6 +150,49 @@ const emptyStateStyle: CSSProperties = {
   color: colors.textSecondary,
 };
 
+const statsContainerStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-around',
+  padding: '20px 24px',
+  borderRadius: layout.cornerRadius,
+  background: 'linear-gradient(145deg, rgba(17, 30, 55, 0.8) 0%, rgba(10, 19, 34, 0.8) 100%)',
+  border: `1px solid ${colors.cardBorder}`,
+  gap: 24,
+};
+
+const statItemStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 8,
+  flex: 1,
+};
+
+const statValueStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 32,
+  fontWeight: 700,
+  color: colors.textPrimary,
+  lineHeight: 1.2,
+};
+
+const statLabelStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 14,
+  fontWeight: 500,
+  color: colors.textSecondary,
+  textAlign: 'center',
+};
+
+const statDividerStyle: CSSProperties = {
+  width: 1,
+  height: 48,
+  background: 'rgba(255, 255, 255, 0.12)',
+  flexShrink: 0,
+};
+
 export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
   const [user, setUser] = useState<MaxUser | null>(null);
   const [cards, setCards] = useState<MaxCard[]>([]);
@@ -267,6 +310,28 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
       >
         Создать инициативу
       </Button>
+
+      {!loading && cards.length > 0 && (
+        <div style={statsContainerStyle}>
+          <div style={statItemStyle}>
+            <Typography.Title style={statValueStyle}>
+              {cards.length}
+            </Typography.Title>
+            <Typography.Body style={statLabelStyle}>
+              Моих инициатив
+            </Typography.Body>
+          </div>
+          <div style={statDividerStyle} />
+          <div style={statItemStyle}>
+            <Typography.Title style={statValueStyle}>
+              {cards.reduce((sum, card) => sum + (card.view_count ?? 0), 0)}
+            </Typography.Title>
+            <Typography.Body style={statLabelStyle}>
+              Просмотров
+            </Typography.Body>
+          </div>
+        </div>
+      )}
 
       <div style={{ marginTop: 24 }}>
         <Typography.Title
