@@ -23,7 +23,9 @@ const app = Fastify({
 
 async function startServer() {
   try {
+    console.log('🔌 Подключение к базе данных...');
     await connectDB();
+    console.log('✅ База данных подключена');
 
     await app.register(cors, {
       origin: true,
@@ -36,13 +38,16 @@ async function startServer() {
       },
     });
 
+    console.log('📝 Регистрация маршрутов...');
     app.get("/fetch-cards", handleGetMaxCards);
     app.get("/user-cards", handleGetUserCards);
     app.get("/viewed-cards", handleGetViewedCards);
     app.post("/create-card", handleCreateMaxCard);
     app.post("/track-card-view", handleTrackCardView);
     app.post("/on-app-close", handleOnAppClose);
+    console.log('✅ Маршруты зарегистрированы');
 
+    console.log(`🚀 Запуск сервера на ${host}:${port}...`);
     const address = await app.listen({ host, port });
     console.log(`✅ API успешно запущен: ${address}`);
     console.log(`✅ API доступен по адресу: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);

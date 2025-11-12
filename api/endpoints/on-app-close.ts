@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { checkAndSendMotivationalMessage } from '../../bot/handlers/motivational-messages.ts';
-import { bot } from '../../bot/bot.ts';
+import { bot } from '../../bot/bot-instance.ts';
 
 type OnAppCloseBody = {
   user_id: number;
