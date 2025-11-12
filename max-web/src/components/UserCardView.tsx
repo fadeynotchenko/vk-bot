@@ -57,7 +57,7 @@ const imageStyle: CSSProperties = {
 const gradientOverlayStyle: CSSProperties = {
   position: 'absolute',
   inset: 0,
-  background: 'linear-gradient(180deg, rgba(10,19,34,0) 30%, rgba(10,19,34,0.85) 100%)',
+  background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.4) 55%, rgba(0,0,0,0.75) 70%, rgba(0,0,0,0.98) 100%)',
 };
 
 const statusBadgeContainerStyle: CSSProperties = {

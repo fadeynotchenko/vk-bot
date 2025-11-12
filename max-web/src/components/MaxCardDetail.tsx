@@ -1,10 +1,11 @@
-import { type CSSProperties } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { Button, Typography } from '@maxhub/max-ui';
 import { colors, layout, shadows } from './theme';
 import type { MaxCard } from '../../api-caller/get-max-cards.ts';
 // Также поддерживает карточки из get-user-cards.ts
 import { TagBadge } from './TagBadge';
 import { formatCardDate } from '../utils/formatDate.ts';
+import { ImageViewerModal } from './ImageViewerModal';
 
 type MaxCardDetailProps = {
   card: MaxCard;
@@ -120,55 +121,95 @@ const viewCountStyle: CSSProperties = {
   backdropFilter: 'blur(8px)',
 };
 
+const imageViewButtonStyle: CSSProperties = {
+  position: 'absolute',
+  top: 16,
+  right: 16,
+  zIndex: 3,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 999,
+  padding: '10px',
+  fontSize: 20,
+  fontWeight: 600,
+  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  color: '#ffffff',
+  border: 'none',
+  cursor: 'pointer',
+  backdropFilter: 'blur(8px)',
+  transition: 'background-color 0.2s ease, transform 0.2s ease',
+};
+
 export function MaxCardDetail({ card, onBack }: MaxCardDetailProps) {
   const formattedDate = formatCardDate(card.date);
   const viewCount = card.view_count ?? 0;
+  const [showImageViewer, setShowImageViewer] = useState(false);
 
   return (
-    <div style={wrapperStyle}>
-      <button type="button" onClick={onBack} style={backButtonStyle}>
-        <span style={{ fontSize: 20 }}>←</span>
-        Назад
-      </button>
+    <>
+      <div style={wrapperStyle}>
+        <button type="button" onClick={onBack} style={backButtonStyle}>
+          <span style={{ fontSize: 20 }}>←</span>
+          Назад
+        </button>
 
-      <div style={heroStyle}>
-        {card.image ? (
-          <img src={card.image} alt={card.title} style={heroImageStyle} />
-        ) : (
-          <div style={heroMediaStyle} />
-        )}
-        <div style={heroGradientStyle} />
-        {viewCount > 0 && (
-          <div style={viewCountStyle}>
-            <span>👁</span>
-            <span>
-              {viewCount} {viewCount === 1 ? 'просмотр' : viewCount < 5 ? 'просмотра' : 'просмотров'}
-            </span>
-          </div>
-        )}
-        <div style={heroContentStyle}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {card.category && (
-              <TagBadge category={card.category} style={{ alignSelf: 'flex-start' }}>
-                {card.category}
-              </TagBadge>
-            )}
-            {formattedDate && (
-              <Typography.Label style={{ color: colors.textMuted, textTransform: 'capitalize' }}>
-                {formattedDate}
-              </Typography.Label>
-            )}
-          </div>
-          <Typography.Title style={{ margin: 0, fontSize: 26, lineHeight: 1.2 }}>
-            {card.title}
-          </Typography.Title>
-          {card.subtitle && (
-            <Typography.Body style={{ color: colors.textSecondary, fontSize: 15 }}>
-              {card.subtitle}
-            </Typography.Body>
+        <div style={heroStyle}>
+          {card.image ? (
+            <img src={card.image} alt={card.title} style={heroImageStyle} />
+          ) : (
+            <div style={heroMediaStyle} />
           )}
+          <div style={heroGradientStyle} />
+          {viewCount > 0 && (
+            <div style={viewCountStyle}>
+              <span>👁</span>
+              <span>
+                {viewCount} {viewCount === 1 ? 'просмотр' : viewCount < 5 ? 'просмотра' : 'просмотров'}
+              </span>
+            </div>
+          )}
+          {card.image && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowImageViewer(true);
+              }}
+              style={imageViewButtonStyle}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+              }}
+            >
+              🔍
+            </button>
+          )}
+          <div style={heroContentStyle}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {card.category && (
+                <TagBadge category={card.category} style={{ alignSelf: 'flex-start' }}>
+                  {card.category}
+                </TagBadge>
+              )}
+              {formattedDate && (
+                <Typography.Label style={{ color: colors.textMuted, textTransform: 'capitalize' }}>
+                  {formattedDate}
+                </Typography.Label>
+              )}
+            </div>
+            <Typography.Title style={{ margin: 0, fontSize: 26, lineHeight: 1.2 }}>
+              {card.title}
+            </Typography.Title>
+            {card.subtitle && (
+              <Typography.Body style={{ color: colors.textSecondary, fontSize: 15 }}>
+                {card.subtitle}
+              </Typography.Body>
+            )}
+          </div>
         </div>
-      </div>
 
       <div style={infoBlockStyle}>
         <Typography.Title style={infoHeadingStyle}>
@@ -198,5 +239,11 @@ export function MaxCardDetail({ card, onBack }: MaxCardDetailProps) {
         </Button>
       </div>
     </div>
+    <ImageViewerModal
+      visible={showImageViewer}
+      imageUrl={card.image || ''}
+      onClose={() => setShowImageViewer(false)}
+    />
+    </>
   );
 }

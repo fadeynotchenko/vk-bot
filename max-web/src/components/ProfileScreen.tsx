@@ -78,7 +78,7 @@ const containerStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  gap: 24,
+  gap: 32,
   padding: `0 ${layout.contentXPadding} 24px`,
   color: colors.textPrimary,
 };
@@ -146,7 +146,7 @@ const cardsListStyle: CSSProperties = {
   padding: `0 0 24px`,
   display: 'flex',
   flexDirection: 'column',
-  gap: 16,
+  gap: 24,
 };
 
 const emptyStateStyle: CSSProperties = {
@@ -439,14 +439,14 @@ export function ProfileScreen({ onCreateInitiative, onEditInitiative, scrollCont
         </div>
       )}
 
-      <div style={{ marginTop: 24 }}>
+      <div style={{ marginTop: 32 }}>
         <Typography.Title
           style={{
             margin: 0,
             fontSize: 20,
             fontWeight: 700,
             color: colors.textPrimary,
-            marginBottom: 20,
+            marginBottom: 28,
           }}
         >
           Мои инициативы
@@ -483,7 +483,7 @@ export function ProfileScreen({ onCreateInitiative, onEditInitiative, scrollCont
           </div>
         ) : (
           <>
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 20 }}>
               <CategoryFilter
                 options={STATUS_FILTERS}
                 activeValue={activeStatusFilter}
@@ -491,7 +491,7 @@ export function ProfileScreen({ onCreateInitiative, onEditInitiative, scrollCont
               />
             </div>
             {filteredCards.length > 0 ? (
-              <div style={{ ...cardsListStyle, paddingTop: 8 }}>
+              <div style={{ ...cardsListStyle, paddingTop: 24 }}>
                 {filteredCards.map((card) => (
                   <UserCardView
                     key={card.id}
