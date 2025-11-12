@@ -43,6 +43,8 @@ export default function App() {
   const [viewedCardIds, setViewedCardIds] = useState<Set<string>>(new Set());
   const [_cardViewCounts, setCardViewCounts] = useState<Map<string, number>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const savedScrollPositionRef = useRef<number>(0);
+  const shouldRestoreScrollRef = useRef<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -113,9 +115,33 @@ export default function App() {
     };
   }, []);
 
+  // Сохраняем позицию скролла перед открытием детального экрана
+  const handleCardSelect = (card: MaxCard) => {
+    if (scrollContainerRef.current && activeTab === 'home') {
+      savedScrollPositionRef.current = scrollContainerRef.current.scrollTop;
+      shouldRestoreScrollRef.current = true;
+    }
+    setSelectedCard(card);
+  };
+
+  // Восстанавливаем скролл при возврате на главную или сбрасываем при открытии детального экрана
   useLayoutEffect(() => {
-    scrollContainerRef.current?.scrollTo({ top: 0 });
-  }, [activeTab, selectedCard]);
+    if (selectedCard) {
+      // При открытии детального экрана - скролл вверху
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    } else if (activeTab === 'home' && shouldRestoreScrollRef.current) {
+      // При возврате на главную страницу после открытия карточки - восстанавливаем сохраненную позицию
+      scrollContainerRef.current?.scrollTo({ 
+        top: savedScrollPositionRef.current, 
+        behavior: 'instant' 
+      });
+      shouldRestoreScrollRef.current = false;
+    } else {
+      // При переключении на другую вкладку или первом рендере - скролл вверху
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+      shouldRestoreScrollRef.current = false;
+    }
+  }, [selectedCard, activeTab]);
 
   useEffect(() => {
     if (!selectedCard) return;
@@ -288,7 +314,7 @@ export default function App() {
                   <VkDobroSection />
                   <MaxCardList 
                     cards={filteredCards} 
-                    onSelect={setSelectedCard}
+                    onSelect={handleCardSelect}
                     viewedCardIds={viewedCardIds}
                   />
                 </>
