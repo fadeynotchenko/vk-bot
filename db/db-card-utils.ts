@@ -184,3 +184,107 @@ export async function createMaxCard(card: MaxCardInput): Promise<MaxCard> {
     date: document.date.toISOString(),
   };
 }
+
+/**
+ * Обновляет существующую карточку инициативы в MongoDB.
+ * 
+ * @param cardId - ID карточки для обновления (строка ObjectId)
+ * @param updates - частичные данные для обновления карточки
+ * @returns Обновлённая карточка или null, если карточка не найдена
+ * 
+ * В случае неуспеха пробрасывает исключение MongoDB.
+ */
+export async function updateMaxCard(cardId: string, updates: Partial<MaxCardInput>): Promise<MaxCard | null> {
+  const cardsCollection = db.collection<MaxCardDocument>('max_cards');
+  const { ObjectId } = await import('mongodb');
+  
+  let objectId: ObjectId;
+  try {
+    objectId = new ObjectId(cardId);
+  } catch {
+    return null;
+  }
+
+  const updateDoc: Partial<MaxCardDocument> = {};
+  
+  if (updates.category !== undefined) updateDoc.category = updates.category;
+  if (updates.title !== undefined) updateDoc.title = updates.title;
+  if (updates.subtitle !== undefined) updateDoc.subtitle = updates.subtitle;
+  if (updates.text !== undefined) updateDoc.text = updates.text;
+  if (updates.status !== undefined) updateDoc.status = updates.status;
+  if (updates.link !== undefined) updateDoc.link = updates.link;
+  if (updates.image !== undefined) updateDoc.image = updates.image;
+  if (updates.user_id !== undefined) updateDoc.user_id = updates.user_id;
+
+  const result = await cardsCollection.findOneAndUpdate(
+    { _id: objectId },
+    { $set: updateDoc },
+    { returnDocument: 'after' }
+  );
+
+  if (!result) {
+    return null;
+  }
+
+  const doc = result;
+  
+  // Получаем счетчик просмотров
+  const viewsCollection = db.collection('card_views');
+  const viewStats = await viewsCollection.aggregate([
+    {
+      $match: {
+        card_id: cardId,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalViews: { $sum: '$view_count' },
+      },
+    },
+  ]).toArray();
+
+  const viewCount = viewStats.length > 0 ? viewStats[0].totalViews : 0;
+
+  return {
+    id: doc._id ? doc._id.toString() : '',
+    category: doc.category,
+    title: doc.title,
+    subtitle: doc.subtitle,
+    text: doc.text,
+    status: doc.status,
+    date: doc.date.toISOString(),
+    view_count: viewCount,
+    ...(doc.link ? { link: doc.link } : {}),
+    ...(doc.image ? { image: doc.image } : {}),
+    ...(doc.user_id ? { user_id: doc.user_id } : {}),
+  };
+}
+
+/**
+ * Удаляет карточку инициативы из MongoDB по ID.
+ * 
+ * @param cardId - ID карточки для удаления (строка ObjectId)
+ * @returns true, если карточка была удалена, false если не найдена
+ * 
+ * В случае неуспеха пробрасывает исключение MongoDB.
+ */
+export async function deleteMaxCard(cardId: string): Promise<boolean> {
+  const cardsCollection = db.collection<MaxCardDocument>('max_cards');
+  const { ObjectId } = await import('mongodb');
+  
+  let objectId: ObjectId;
+  try {
+    objectId = new ObjectId(cardId);
+  } catch {
+    return false;
+  }
+
+  const result = await cardsCollection.deleteOne({ _id: objectId });
+  
+  // Также удаляем связанные просмотры
+  const viewsCollection = db.collection('card_views');
+  await viewsCollection.deleteMany({ card_id: cardId });
+
+  return result.deletedCount > 0;
+}

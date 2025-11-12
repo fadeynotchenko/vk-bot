@@ -2,12 +2,16 @@ import { useEffect, useId, useState, type ChangeEvent, type CSSProperties } from
 import { Button, Textarea, Typography } from '@maxhub/max-ui';
 import { colors, layout } from './theme';
 import { createMaxCardFromUI } from '../../api-caller/create-max-card.ts';
+import { updateMaxCardFromUI } from '../../api-caller/update-max-card.ts';
 import { getMaxUser } from '../utils/maxBridge.ts';
 import { userCardsCache } from '../utils/userCardsCache.ts';
 import { ModerationAlert } from './ModerationAlert';
+import type { MaxCard } from '../../api-caller/get-user-cards.ts';
 
 type CreateInitiativeScreenProps = {
   onBack: () => void;
+  cardToEdit?: MaxCard;
+  onSuccess?: () => void;
 };
 
 type CategoryOption = {
@@ -189,16 +193,27 @@ const categoryOptions: CategoryOption[] = [
   { value: 'волонтерство', label: 'Волонтерство', Icon: HandsIcon },
 ];
 
-export function CreateInitiativeScreen({ onBack }: CreateInitiativeScreenProps) {
+export function CreateInitiativeScreen({ onBack, cardToEdit, onSuccess }: CreateInitiativeScreenProps) {
   const uploadInputId = useId();
-  const [category, setCategory] = useState<string>(categoryOptions[0]?.value ?? '');
-  const [title, setTitle] = useState('');
-  const [shortDescription, setShortDescription] = useState('');
-  const [description, setDescription] = useState('');
-  const [link, setLink] = useState('');
+  const isEditMode = !!cardToEdit;
+  
+  // Находим категорию из существующих опций или используем значение из карточки
+  const getCategoryValue = (categoryLabel?: string): string => {
+    if (!categoryLabel) return categoryOptions[0]?.value ?? '';
+    const found = categoryOptions.find(opt => opt.label.toLowerCase() === categoryLabel.toLowerCase());
+    return found?.value ?? categoryOptions[0]?.value ?? '';
+  };
+
+  const [category, setCategory] = useState<string>(
+    cardToEdit ? getCategoryValue(cardToEdit.category) : (categoryOptions[0]?.value ?? '')
+  );
+  const [title, setTitle] = useState(cardToEdit?.title ?? '');
+  const [shortDescription, setShortDescription] = useState(cardToEdit?.subtitle ?? '');
+  const [description, setDescription] = useState(cardToEdit?.text ?? '');
+  const [link, setLink] = useState(cardToEdit?.link ?? '');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageName, setImageName] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(cardToEdit?.image ?? null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showModerationAlert, setShowModerationAlert] = useState(false);
@@ -268,46 +283,72 @@ export function CreateInitiativeScreen({ onBack }: CreateInitiativeScreenProps) 
     try {
       const maxUser = getMaxUser();
       
-      const payload = {
-        category: categoryLabel,
-        title: title.trim(),
-        subtitle: shortDescription.trim(),
-        text: description.trim(),
-        status: 'moderate',
-        ...(trimmedLink ? { link: trimmedLink } : {}),
-        ...(imageFile ? { image: imageFile } : {}),
-        ...(maxUser ? { user_id: maxUser.id } : {}),
-      };
-      const createdCard = await createMaxCardFromUI(payload);
+      if (isEditMode && cardToEdit) {
+        // Режим редактирования
+        const updatePayload: any = {
+          card_id: cardToEdit.id,
+          category: categoryLabel,
+          title: title.trim(),
+          subtitle: shortDescription.trim(),
+          text: description.trim(),
+          ...(trimmedLink ? { link: trimmedLink } : { link: '' }),
+          ...(imageFile ? { image: imageFile } : {}),
+        };
+        
+        const updatedCard = await updateMaxCardFromUI(updatePayload);
 
-      if (maxUser?.id) {
-        if (createdCard.status === 'accepted') {
-          userCardsCache.addCardToCache(maxUser.id, createdCard);
+        if (maxUser?.id) {
+          await userCardsCache.invalidateUserCache(maxUser.id);
+        }
+
+        if (onSuccess) {
+          onSuccess();
         } else {
-          userCardsCache.invalidateUserCache(maxUser.id).catch((err) => {
-            console.error('Failed to invalidate cache:', err);
-          });
+          setShowModerationAlert(true);
         }
+      } else {
+        // Режим создания
+        const payload = {
+          category: categoryLabel,
+          title: title.trim(),
+          subtitle: shortDescription.trim(),
+          text: description.trim(),
+          status: 'moderate',
+          ...(trimmedLink ? { link: trimmedLink } : {}),
+          ...(imageFile ? { image: imageFile } : {}),
+          ...(maxUser ? { user_id: maxUser.id } : {}),
+        };
+        const createdCard = await createMaxCardFromUI(payload);
+
+        if (maxUser?.id) {
+          if (createdCard.status === 'accepted') {
+            userCardsCache.addCardToCache(maxUser.id, createdCard);
+          } else {
+            userCardsCache.invalidateUserCache(maxUser.id).catch((err) => {
+              console.error('Failed to invalidate cache:', err);
+            });
+          }
+        }
+
+        setCategory(categoryOptions[0]?.value ?? '');
+        setTitle('');
+        setShortDescription('');
+        setDescription('');
+        setLink('');
+        setImageFile(null);
+        setImageName(null);
+        setImagePreview((prev) => {
+          if (prev) {
+            URL.revokeObjectURL(prev);
+          }
+          return null;
+        });
+
+        setShowModerationAlert(true);
       }
-
-      setCategory(categoryOptions[0]?.value ?? '');
-      setTitle('');
-      setShortDescription('');
-      setDescription('');
-      setLink('');
-      setImageFile(null);
-      setImageName(null);
-      setImagePreview((prev) => {
-        if (prev) {
-          URL.revokeObjectURL(prev);
-        }
-        return null;
-      });
-
-      setShowModerationAlert(true);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Не удалось опубликовать инициативу';
+        error instanceof Error ? error.message : (isEditMode ? 'Не удалось обновить инициативу' : 'Не удалось опубликовать инициативу');
       setSubmitError(message);
     } finally {
       setSubmitting(false);
@@ -337,9 +378,13 @@ export function CreateInitiativeScreen({ onBack }: CreateInitiativeScreenProps) 
       </button>
 
       <div style={headerBlockStyle}>
-        <Typography.Title style={{ margin: 0, fontSize: 28 }}>Создать инициативу</Typography.Title>
+        <Typography.Title style={{ margin: 0, fontSize: 28 }}>
+          {isEditMode ? 'Редактировать инициативу' : 'Создать инициативу'}
+        </Typography.Title>
         <Typography.Body style={{ color: colors.textSecondary }}>
-          Поделись собственной инициативой с сообществом!
+          {isEditMode 
+            ? 'Внесите изменения в вашу инициативу'
+            : 'Поделись собственной инициативой с сообществом!'}
         </Typography.Body>
       </div>
 
@@ -370,7 +415,7 @@ export function CreateInitiativeScreen({ onBack }: CreateInitiativeScreenProps) 
           )}
         </div>
         <Typography.Body style={{ textAlign: 'center', color: colors.textPrimary }}>
-          {imageName ?? 'Загрузите изображение'}
+          {imageName ?? (cardToEdit?.image ? 'Текущее изображение' : 'Загрузите изображение')}
         </Typography.Body>
         <Typography.Label style={{ ...uploadHintStyle, fontSize: 13 }}>
           PNG, JPG до 5MB
@@ -502,7 +547,9 @@ export function CreateInitiativeScreen({ onBack }: CreateInitiativeScreenProps) 
           onClick={handleSubmit}
           disabled={!isFormValid || submitting}
         >
-          {submitting ? 'Публикуем...' : 'Опубликовать инициативу'}
+          {submitting 
+            ? (isEditMode ? 'Сохраняем...' : 'Публикуем...') 
+            : (isEditMode ? 'Сохранить изменения' : 'Опубликовать инициативу')}
         </Button>
         {submitError && (
           <Typography.Label style={{ color: colors.error, marginTop: 12 }}>

@@ -7,6 +7,8 @@ import { handleGetUserCards } from "./endpoints/get-user-cards.ts";
 import { handleTrackCardView } from "./endpoints/track-card-view.ts";
 import { handleGetViewedCards } from "./endpoints/get-viewed-cards.ts";
 import { handleOnAppClose } from "./endpoints/on-app-close.ts";
+import { handleDeleteMaxCard } from "./endpoints/delete-max-card.ts";
+import { handleUpdateMaxCard } from "./endpoints/update-max-card.ts";
 import { connectDB } from "../db/db-client.ts";
 
 const LISTEN_URL = process.env.API_LISTEN_URL ?? "http://127.0.0.1:8788";
@@ -43,14 +45,14 @@ async function startServer() {
     app.get("/user-cards", handleGetUserCards);
     app.get("/viewed-cards", handleGetViewedCards);
     app.post("/create-card", handleCreateMaxCard);
+    app.put("/update-card", handleUpdateMaxCard);
+    app.delete("/delete-card", handleDeleteMaxCard);
     app.post("/track-card-view", handleTrackCardView);
     app.post("/on-app-close", handleOnAppClose);
-    console.log('✅ Маршруты зарегистрированы');
 
     console.log(`🚀 Запуск сервера на ${host}:${port}...`);
     const address = await app.listen({ host, port });
     console.log(`✅ API успешно запущен: ${address}`);
-    console.log(`✅ API доступен по адресу: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
   } catch (error) {
     console.error("❌ Не удалось запустить API:", error);
     if (error instanceof Error) {

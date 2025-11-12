@@ -346,7 +346,12 @@ export default function App() {
       );
     }
 
-    return <ProfileScreen onCreateInitiative={() => setProfileView('create')} />;
+    return (
+      <ProfileScreen 
+        onCreateInitiative={() => setProfileView('create')}
+        scrollContainerRef={scrollContainerRef}
+      />
+    );
   };
 
   return (

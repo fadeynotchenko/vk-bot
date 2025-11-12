@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect, type CSSProperties } from 'react';
 import { Typography, Button, Spinner } from '@maxhub/max-ui';
 import { colors, layout } from './theme';
 import { getMaxUser, getUserFullName, getUserInitials, type MaxUser } from '../utils/maxBridge';
@@ -7,6 +7,8 @@ import { userCardsCache } from '../utils/userCardsCache.ts';
 import { UserCardView } from './UserCardView';
 import { MaxCardDetail } from './MaxCardDetail';
 import { CategoryFilter, type CategoryFilterOption } from './CategoryFilter';
+import { deleteMaxCardFromUI } from '../../api-caller/delete-max-card.ts';
+import { CreateInitiativeScreen } from './CreateInitiativeScreen';
 
 type ErrorScreenProps = {
   error: string;
@@ -68,6 +70,8 @@ function ErrorScreen({ error, onRetry }: ErrorScreenProps) {
 
 type ProfileScreenProps = {
   onCreateInitiative: () => void;
+  onEditInitiative?: (card: MaxCard) => void;
+  scrollContainerRef?: React.RefObject<HTMLDivElement>;
 };
 
 const containerStyle: CSSProperties = {
@@ -201,13 +205,16 @@ const STATUS_FILTERS: CategoryFilterOption[] = [
   { label: 'Отклонено', value: 'rejected' },
 ];
 
-export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
+export function ProfileScreen({ onCreateInitiative, onEditInitiative, scrollContainerRef }: ProfileScreenProps) {
   const [user, setUser] = useState<MaxUser | null>(null);
   const [cards, setCards] = useState<MaxCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<MaxCard | null>(null);
+  const [editingCard, setEditingCard] = useState<MaxCard | null>(null);
   const [activeStatusFilter, setActiveStatusFilter] = useState<CategoryFilterOption['value']>('all');
+  const savedScrollPositionRef = useRef<number>(0);
+  const shouldRestoreScrollRef = useRef<boolean>(false);
 
   useEffect(() => {
     const loadUser = () => {
@@ -274,6 +281,73 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
   const filteredCards = activeStatusFilter === 'all'
     ? cards
     : cards.filter((card) => card.status?.toLowerCase() === activeStatusFilter.toLowerCase());
+
+  // Сохраняем позицию скролла перед открытием детального экрана
+  const handleCardSelect = (card: MaxCard) => {
+    if (scrollContainerRef?.current) {
+      savedScrollPositionRef.current = scrollContainerRef.current.scrollTop;
+      shouldRestoreScrollRef.current = true;
+    }
+    setSelectedCard(card);
+  };
+
+  // Восстанавливаем скролл при возврате на список или сбрасываем при открытии детального экрана
+  useLayoutEffect(() => {
+    if (!scrollContainerRef?.current) return;
+
+    if (selectedCard) {
+      // При открытии детального экрана - скролл вверху
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'instant' });
+    } else if (shouldRestoreScrollRef.current) {
+      // При возврате на список карточек - восстанавливаем сохраненную позицию
+      scrollContainerRef.current.scrollTo({ 
+        top: savedScrollPositionRef.current, 
+        behavior: 'instant' 
+      });
+      shouldRestoreScrollRef.current = false;
+    }
+  }, [selectedCard]);
+
+  const handleDeleteCard = async (cardId: string) => {
+    try {
+      await deleteMaxCardFromUI(cardId);
+      if (user?.id) {
+        await userCardsCache.invalidateUserCache(user.id);
+        const updatedCards = await userCardsCache.getUserCards(user.id);
+        setCards(updatedCards);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Не удалось удалить карточку';
+      throw new Error(message);
+    }
+  };
+
+  const handleEditCard = (card: MaxCard) => {
+    if (onEditInitiative) {
+      onEditInitiative(card);
+    } else {
+      setEditingCard(card);
+    }
+  };
+
+  if (editingCard) {
+    return (
+      <CreateInitiativeScreen
+        cardToEdit={editingCard}
+        onBack={() => setEditingCard(null)}
+        onSuccess={() => {
+          setEditingCard(null);
+          if (user?.id) {
+            userCardsCache.invalidateUserCache(user.id).then(() => {
+              userCardsCache.getUserCards(user.id).then((updatedCards) => {
+                setCards(updatedCards);
+              });
+            });
+          }
+        }}
+      />
+    );
+  }
 
   if (selectedCard) {
     return (
@@ -400,7 +474,13 @@ export function ProfileScreen({ onCreateInitiative }: ProfileScreenProps) {
             {filteredCards.length > 0 ? (
               <div style={{ ...cardsListStyle, paddingTop: 8 }}>
                 {filteredCards.map((card) => (
-                  <UserCardView key={card.id} card={card} onOpen={setSelectedCard} />
+                  <UserCardView
+                    key={card.id}
+                    card={card}
+                    onOpen={handleCardSelect}
+                    onEdit={handleEditCard}
+                    onDelete={handleDeleteCard}
+                  />
                 ))}
               </div>
             ) : (
