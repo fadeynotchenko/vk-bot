@@ -1,6 +1,6 @@
 import type { Bot } from '@maxhub/max-bot-api';
 import { getUserTotalViewCount } from '../../db/db-card-views-utils.ts';
-import { getLastViewCount, saveLastViewCount, getLastMotivationalMessageId, saveLastMotivationalMessageId } from '../../db/db-user-utils.ts';
+import { getLastViewCount, saveLastViewCount, saveLastMotivationalMessageId } from '../../db/db-user-utils.ts';
 
 const MOTIVATION_MESSAGES: readonly string[] = [
   'Продолжайте исследовать инициативы — каждая может стать вашим шансом помочь!',
@@ -61,44 +61,9 @@ function generateMotivationalMessage(viewsThisSession: number, totalViews: numbe
 }
 
 /**
- * Проверяет, является ли сообщение статистическим.
- * Проверяет наличие всех ключевых элементов статистического сообщения.
+ * Отправляет мотивационное сообщение со статистикой пользователю при закрытии мини-приложения.
  * 
- * @param messageText - текст сообщения
- * @returns true, если сообщение содержит статистику
- */
-function isStatisticsMessage(messageText: string | null): boolean {
-  if (!messageText) return false;
-  
-  // Проверяем наличие всех ключевых элементов статистического сообщения
-  const hasStatisticsEmoji = messageText.includes('📊 Статистика');
-  const hasSessionInfo = messageText.includes('За эту сессию') || messageText.includes('сессию');
-  const hasTotalInfo = messageText.includes('Всего просмотрено');
-  
-  // Сообщение статистическое только если содержит все элементы
-  return hasStatisticsEmoji && hasSessionInfo && hasTotalInfo;
-}
-
-/**
- * Извлекает дату из текста статистического сообщения.
- * 
- * @param messageText - текст сообщения
- * @returns Дата в формате "15 января 2024" или null, если дата не найдена
- */
-function extractDateFromMessage(messageText: string | null): string | null {
-  if (!messageText) return null;
-  
-  const match = messageText.match(/📊 Статистика за (.+?):/);
-  return match ? match[1]! : null;
-}
-
-/**
- * Проверяет и отправляет/редактирует мотивационное сообщение пользователю при закрытии мини-приложения.
- * 
- * Если у пользователя уже есть статистическое сообщение за сегодняшний день, редактирует его.
- * Если последнее сообщение не является статистическим, за другой день или его нет, отправляет новое.
- * 
- * Отправляет сообщение со статистикой: сколько просмотрено за эту сессию и всего.
+ * Всегда отправляет новое сообщение со статистикой: сколько просмотрено за эту сессию и всего.
  * Включает случайную мотивацию из 3-4 вариантов.
  * 
  * @param bot - экземпляр бота для отправки сообщений
@@ -106,65 +71,19 @@ function extractDateFromMessage(messageText: string | null): string | null {
  */
 export async function checkAndSendMotivationalMessage(bot: Bot, userId: number): Promise<void> {
   try {
-    const [totalViewCount, lastViewCount, lastMessageId] = await Promise.all([
+    const [totalViewCount, lastViewCount] = await Promise.all([
       getUserTotalViewCount(userId),
       getLastViewCount(userId),
-      getLastMotivationalMessageId(userId),
     ]);
 
     const viewsThisSession = Math.max(0, totalViewCount - lastViewCount);
-    const currentDate = formatCurrentDate();
     const message = generateMotivationalMessage(viewsThisSession, totalViewCount);
     
-    // Пытаемся получить и проверить последнее сообщение
-    if (lastMessageId) {
-      try {
-        const lastMessage = await bot.api.getMessage(lastMessageId);
-        const lastMessageText = lastMessage.body?.text || null;
-        
-        // Проверяем, является ли сообщение статистическим
-        if (isStatisticsMessage(lastMessageText)) {
-          const lastMessageDate = extractDateFromMessage(lastMessageText);
-          
-          // Если дата совпадает с текущей И сообщение действительно статистическое, редактируем
-          if (lastMessageDate && lastMessageDate === currentDate) {
-            // Дополнительная проверка: убеждаемся, что можем редактировать сообщение
-            try {
-              await bot.api.editMessage(lastMessageId, { text: message });
-              await saveLastViewCount(userId, totalViewCount);
-              console.log(`✅ Статистика отредактирована для пользователя ${userId}`);
-              return;
-            } catch (editError: any) {
-              // Если редактирование не удалось (сообщение удалено, недоступно и т.д.), отправляем новое
-              console.log(`⚠️ Не удалось отредактировать сообщение ${lastMessageId}, отправляем новое`);
-              const newMessage = await bot.api.sendMessageToUser(userId, message);
-              await saveLastMotivationalMessageId(userId, newMessage.body.mid);
-              await saveLastViewCount(userId, totalViewCount);
-              console.log(`✅ Новая статистика отправлена пользователю ${userId}`);
-              return;
-            }
-          }
-        }
-        
-        // Если сообщение не статистическое или за другой день, отправляем новое
-        const newMessage = await bot.api.sendMessageToUser(userId, message);
-        await saveLastMotivationalMessageId(userId, newMessage.body.mid);
-        await saveLastViewCount(userId, totalViewCount);
-        console.log(`✅ Новая статистика отправлена пользователю ${userId}`);
-      } catch (getError: any) {
-        // Если сообщение не найдено, удалено или недоступно, отправляем новое
-        const newMessage = await bot.api.sendMessageToUser(userId, message);
-        await saveLastMotivationalMessageId(userId, newMessage.body.mid);
-        await saveLastViewCount(userId, totalViewCount);
-        console.log(`✅ Новая статистика отправлена пользователю ${userId}`);
-      }
-    } else {
-      // Если ID сообщения нет, отправляем новое
-      const newMessage = await bot.api.sendMessageToUser(userId, message);
-      await saveLastMotivationalMessageId(userId, newMessage.body.mid);
-      await saveLastViewCount(userId, totalViewCount);
-      console.log(`✅ Новая статистика отправлена пользователю ${userId}`);
-    }
+    // Всегда отправляем новое сообщение со статистикой
+    const newMessage = await bot.api.sendMessageToUser(userId, message);
+    await saveLastMotivationalMessageId(userId, newMessage.body.mid);
+    await saveLastViewCount(userId, totalViewCount);
+    console.log(`✅ Статистика отправлена пользователю ${userId}`);
   } catch (error: any) {
     console.error(`❌ Ошибка при отправке статистики пользователю ${userId}:`, error?.message || error);
     throw error;
