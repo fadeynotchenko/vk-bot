@@ -62,6 +62,9 @@ export default function App() {
         if (isMounted) {
           setCards(cardsData);
           setViewedCardIds(new Set(viewedIds));
+          if (maxUser?.id) {
+            console.log(`✅ Карточки загружены для пользователя ${maxUser.id} (${cardsData.length} карточек)`);
+          }
         }
       })
       .catch((err) => {

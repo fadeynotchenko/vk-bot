@@ -30,7 +30,7 @@ export async function handleTrackCardView(req: FastifyRequest<{ Body: TrackCardV
 
     const viewCount = await trackCardView(card_id, user_id);
 
-    req.log.info({ method: 'trackCardView', user_id, card_id, view_count: viewCount }, `Successfully executed trackCardView for user: ${user_id}`);
+    console.log(`✅ Просмотр карточки засчитан для пользователя ${user_id}`);
 
     return reply.code(200).send({ ok: true, view_count: viewCount });
   } catch (e: any) {

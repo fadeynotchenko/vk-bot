@@ -11,7 +11,7 @@ export async function handleGetMaxCards(req: FastifyRequest, reply: FastifyReply
   try {
     const cards = await getMaxCards();
     
-    req.log.info({ method: 'getMaxCards', count: cards.length }, 'Successfully executed getMaxCards');
+    console.log(`✅ Карточки загружены (${cards.length} карточек)`);
     
     return reply.code(200).send({ ok: true, data: cards });
   } catch (e: any) {

@@ -1,5 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { deleteMaxCard } from '../../db/db-card-utils.ts';
+import { db } from '../../db/db-client.ts';
+import { ObjectId } from 'mongodb';
 
 /**
  * Обрабатывает DELETE /delete-card.
@@ -19,13 +21,27 @@ export async function handleDeleteMaxCard(req: FastifyRequest, reply: FastifyRep
     }
 
     const cardId = query.card_id.trim();
+    
+    // Получаем user_id перед удалением для логирования
+    let userId: number | undefined;
+    try {
+      const cardDoc = await db.collection('max_cards').findOne({ _id: new ObjectId(cardId) });
+      if (cardDoc && cardDoc.user_id) {
+        userId = cardDoc.user_id;
+      }
+    } catch {
+      // Игнорируем ошибку, если не удалось получить user_id
+    }
+    
     const deleted = await deleteMaxCard(cardId);
     
     if (!deleted) {
       return reply.code(404).send({ ok: false, error: 'Card not found' });
     }
     
-    req.log.info({ method: 'deleteMaxCard', card_id: cardId }, `Successfully deleted card: ${cardId}`);
+    if (userId) {
+      console.log(`✅ Карточка удалена для пользователя ${userId}`);
+    }
     
     return reply.code(200).send({ ok: true });
   } catch (e: any) {

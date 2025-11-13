@@ -248,6 +248,7 @@ export function ProfileScreen({ onCreateInitiative, onEditInitiative, scrollCont
       .then((data) => {
         if (isMounted) {
           setCards(data);
+          console.log(`✅ Карточки пользователя загружены для пользователя ${user.id} (${data.length} карточек)`);
         }
       })
       .catch((err) => {
@@ -312,6 +313,7 @@ export function ProfileScreen({ onCreateInitiative, onEditInitiative, scrollCont
     try {
       await deleteMaxCardFromUI(cardId);
       if (user?.id) {
+        console.log(`✅ Карточка удалена для пользователя ${user.id}`);
         await userCardsCache.invalidateUserCache(user.id);
         const updatedCards = await userCardsCache.getUserCards(user.id);
         setCards(updatedCards);
@@ -439,7 +441,7 @@ export function ProfileScreen({ onCreateInitiative, onEditInitiative, scrollCont
         </div>
       )}
 
-      <div style={{ marginTop: 32 }}>
+      <div style={{ marginTop: 14 }}>
         <Typography.Title
           style={{
             margin: 0,

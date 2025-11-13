@@ -83,7 +83,9 @@ export async function handleCreateMaxCard(req: FastifyRequest, reply: FastifyRep
 
     const card = await createMaxCard(payload);
     
-    req.log.info({ method: 'createMaxCard', user_id: userId, card_id: card.id }, `Successfully executed createMaxCard for user: ${userId ?? 'anonymous'}`);
+    if (userId) {
+      console.log(`✅ Карточка создана для пользователя ${userId}`);
+    }
     
     return reply.code(201).send({ ok: true, data: card });
   } catch (e: any) {

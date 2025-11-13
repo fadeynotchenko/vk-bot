@@ -317,6 +317,7 @@ export function CreateInitiativeScreen({ onBack, cardToEdit, onSuccess }: Create
         await updateMaxCardFromUI(updatePayload);
 
         if (maxUser?.id) {
+          console.log(`✅ Карточка отредактирована для пользователя ${maxUser.id}`);
           await userCardsCache.invalidateUserCache(maxUser.id);
         }
 
@@ -340,6 +341,7 @@ export function CreateInitiativeScreen({ onBack, cardToEdit, onSuccess }: Create
         const createdCard = await createMaxCardFromUI(payload);
 
         if (maxUser?.id) {
+          console.log(`✅ Карточка создана для пользователя ${maxUser.id}`);
           if (createdCard.status === 'accepted') {
             userCardsCache.addCardToCache(maxUser.id, createdCard);
           } else {

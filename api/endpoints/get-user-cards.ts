@@ -28,7 +28,7 @@ export async function handleGetUserCards(req: FastifyRequest, reply: FastifyRepl
 
     const cards = await getUserMaxCards(userId);
     
-    req.log.info({ method: 'getUserCards', user_id: userId, count: cards.length }, `Successfully executed getUserCards for user: ${userId}`);
+    console.log(`✅ Карточки пользователя загружены для пользователя ${userId} (${cards.length} карточек)`);
     
     return reply.code(200).send({ ok: true, data: cards });
   } catch (e: any) {

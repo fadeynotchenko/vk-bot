@@ -96,7 +96,10 @@ export async function handleUpdateMaxCard(req: FastifyRequest, reply: FastifyRep
       return reply.code(404).send({ ok: false, error: 'Card not found' });
     }
     
-    req.log.info({ method: 'updateMaxCard', card_id: cardId }, `Successfully updated card: ${cardId}`);
+    const userId = updatedCard.user_id;
+    if (userId) {
+      console.log(`✅ Карточка отредактирована для пользователя ${userId}`);
+    }
     
     return reply.code(200).send({ ok: true, data: updatedCard });
   } catch (e: any) {
