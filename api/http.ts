@@ -7,7 +7,6 @@ import { handleCreateMaxCard } from "./endpoints/create-max-card.ts";
 import { handleGetUserCards } from "./endpoints/get-user-cards.ts";
 import { handleTrackCardView } from "./endpoints/track-card-view.ts";
 import { handleGetViewedCards } from "./endpoints/get-viewed-cards.ts";
-import { handleOnAppClose } from "./endpoints/on-app-close.ts";
 import { handleDeleteMaxCard } from "./endpoints/delete-max-card.ts";
 import { handleUpdateMaxCard } from "./endpoints/update-max-card.ts";
 import { connectDB } from "../db/db-client.ts";
@@ -49,7 +48,6 @@ async function startServer() {
     app.put("/update-card", handleUpdateMaxCard);
     app.delete("/delete-card", handleDeleteMaxCard);
     app.post("/track-card-view", handleTrackCardView);
-    app.post("/on-app-close", handleOnAppClose);
 
     console.log(`🚀 Запуск сервера на ${host}:${port}...`);
     await app.listen({ host, port });

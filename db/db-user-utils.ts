@@ -25,37 +25,38 @@ export async function upsertUser(user_id: number, name: string) {
 }
 
 /**
- * Получает последнее сохраненное количество просмотров пользователя.
+ * Получает количество просмотров на момент последнего вызова команды /stats.
  * 
  * @param user_id - идентификатор пользователя
- * @returns Последнее количество просмотров или 0, если данных нет
+ * @returns Количество просмотров на момент последнего вызова или 0, если данных нет
  */
-export async function getLastViewCount(user_id: number): Promise<number> {
+export async function getLastStatsViewCount(user_id: number): Promise<number> {
   const user = await db.collection('max_users').findOne(
     { user_id: user_id },
-    { projection: { lastViewCount: 1 } }
+    { projection: { lastStatsViewCount: 1 } }
   );
   
-  return (user?.lastViewCount as number) || 0;
+  return (user?.lastStatsViewCount as number) || 0;
 }
 
 /**
- * Сохраняет текущее количество просмотров пользователя.
+ * Сохраняет количество просмотров на момент вызова команды /stats.
  * 
  * @param user_id - идентификатор пользователя
  * @param viewCount - текущее количество просмотров
  */
-export async function saveLastViewCount(user_id: number, viewCount: number): Promise<void> {
+export async function saveLastStatsViewCount(user_id: number, viewCount: number): Promise<void> {
   await db.collection('max_users').updateOne(
     { user_id: user_id },
     {
       $set: {
-        lastViewCount: viewCount,
+        lastStatsViewCount: viewCount,
+        lastStatsDate: new Date(),
       }
     },
     { upsert: true }
   );
-  console.log(`✅ Сохранено количество просмотров для пользователя ${user_id}: ${viewCount}`);
+  console.log(`✅ Сохранено количество просмотров для статистики пользователя ${user_id}: ${viewCount}`);
 }
 
 /**

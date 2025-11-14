@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { botStartedHandler } from './handlers/bot-started.ts';
 import { topCommandHandler } from './handlers/top-cards-command.ts';
 import { topViewsCommandHandler } from './handlers/top-views-command.ts';
+import { statsCommandHandler } from './handlers/stats-command.ts';
 import { topCallbackHandler } from './handlers/top-cards-callback.ts';
 import { topViewsCallbackHandler } from './handlers/top-views-callback.ts';
 
@@ -15,6 +16,8 @@ bot.on('bot_started', botStartedHandler);
 bot.command('topcards', topCommandHandler);
 
 bot.command('topviews', topViewsCommandHandler);
+
+bot.command('stats', statsCommandHandler);
 
 bot.on('message_callback', async (ctx) => {
   await topCallbackHandler(bot, ctx);
@@ -34,6 +37,10 @@ export async function registerBotCommands(): Promise<void> {
         {
           name: 'topviews',
           description: 'Показать топ пользователей по количеству просмотров',
+        },
+        {
+          name: 'stats',
+          description: 'Показать вашу статистику просмотров и прогресс',
         },
       ]);
       console.log('✅ Список команд зарегистрирован');

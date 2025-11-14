@@ -14,7 +14,7 @@ import { VkDobroSection } from './components/VkDobroSection';
 import { colors, layout } from './components/theme';
 import { trackCardViewFromUI } from '../api-caller/track-card-view.ts';
 import { fetchViewedCardsFromUI } from '../api-caller/get-viewed-cards.ts';
-import { getMaxUser, onAppClose } from './utils/maxBridge.ts';
+import { getMaxUser } from './utils/maxBridge.ts';
 
 const spinnerWrapperStyle: CSSProperties = {
   flex: 1,
@@ -97,20 +97,6 @@ export default function App() {
     }
   }, [activeTab]);
 
-  useEffect(() => {
-    const maxUser = getMaxUser();
-    if (!maxUser?.id) {
-      console.warn('⚠️ Cannot set up app close handler: user ID not available');
-      return;
-    }
-
-    const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://127.0.0.1:8788';
-    const unsubscribe = onAppClose(maxUser.id, apiUrl);
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
 
   // Сохраняем позицию скролла перед открытием детального экрана
   const handleCardSelect = (card: MaxCard) => {

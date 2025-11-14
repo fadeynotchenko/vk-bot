@@ -1,6 +1,6 @@
 import type { Bot } from '@maxhub/max-bot-api';
 import { getUserTotalViewCount } from '../../db/db-card-views-utils.ts';
-import { getLastViewCount, saveLastViewCount, saveLastMotivationalMessageId, getLastMotivationalMessageId, getLastMotivationalMessageText } from '../../db/db-user-utils.ts';
+import { getLastStatsViewCount, saveLastStatsViewCount, saveLastMotivationalMessageId, getLastMotivationalMessageId, getLastMotivationalMessageText } from '../../db/db-user-utils.ts';
 
 const MOTIVATION_MESSAGES_WITH_VIEWS: readonly string[] = [
   '🌟 Каждая инициатива, которую вы просматриваете, может стать реальной помощью для людей. Спасибо за ваше участие!',
@@ -92,14 +92,14 @@ function formatCurrentDate(): string {
 /**
  * Генерирует мотивационное сообщение со статистикой просмотров.
  * 
- * @param viewsThisSession - количество просмотров за текущую сессию
+ * @param viewsSinceLastStats - количество просмотров с момента последнего вызова команды /stats
  * @param totalViews - общее количество просмотров
  * @returns Сформированное сообщение
  */
-function generateMotivationalMessage(viewsThisSession: number, totalViews: number): string {
-  const viewsThisSessionText = formatViewCount(viewsThisSession);
+function generateMotivationalMessage(viewsSinceLastStats: number, totalViews: number): string {
+  const viewsSinceLastStatsText = formatViewCount(viewsSinceLastStats);
   const totalViewsText = formatViewCount(totalViews);
-  const motivation = getRandomMotivation(viewsThisSession > 0);
+  const motivation = getRandomMotivation(viewsSinceLastStats > 0);
   const currentDate = formatCurrentDate();
   const level = getLevel(totalViews);
   const { viewsNeeded, nextLevel } = getNextLevelInfo(level, totalViews);
@@ -111,45 +111,47 @@ function generateMotivationalMessage(viewsThisSession: number, totalViews: numbe
     levelInfo += `\n🎉 Вы достигли максимального уровня!`;
   }
   
-  if (viewsThisSession === 0) {
-    return `📊 Статистика за ${currentDate}\n\n📱 За эту сессию: 0 просмотров\n📈 Всего просмотрено: ${totalViewsText}${levelInfo}\n\n${motivation}`;
+  if (viewsSinceLastStats === 0) {
+    return `📊 Статистика за ${currentDate}\n\n📱 С последнего запроса: 0 просмотров\n📈 Всего просмотрено: ${totalViewsText}${levelInfo}\n\n${motivation}`;
   }
   
-  return `📊 Статистика за ${currentDate}\n\n📱 За эту сессию: ${viewsThisSessionText}\n📈 Всего просмотрено: ${totalViewsText}${levelInfo}\n\n${motivation}`;
+  return `📊 Статистика за ${currentDate}\n\n📱 С последнего запроса: ${viewsSinceLastStatsText}\n📈 Всего просмотрено: ${totalViewsText}${levelInfo}\n\n${motivation}`;
 }
 
 /**
- * Отправляет мотивационное сообщение со статистикой пользователю при закрытии мини-приложения.
+ * Отправляет мотивационное сообщение со статистикой пользователю по команде /stats.
  * 
  * Логика работы:
- * - Всегда генерирует новое сообщение со статистикой
+ * - Вычисляет прогресс с момента последнего вызова команды /stats
+ * - Генерирует новое сообщение со статистикой
  * - Если предыдущее сообщение имеет такой же текст - редактирует существующее сообщение
  * - Если тексты разные или предыдущего сообщения нет - отправляет новое сообщение
  * - Если редактирование не удалось (например, пользователь удалил чат) - отправляет новое сообщение
+ * - Сохраняет текущее количество просмотров для следующего вызова команды
  * 
  * @param bot - экземпляр бота для отправки сообщений
  * @param userId - ID пользователя MAX
  */
-export async function checkAndSendMotivationalMessage(bot: Bot, userId: number): Promise<void> {
+export async function sendStatsMessage(bot: Bot, userId: number): Promise<void> {
   try {
-    const [totalViewCount, lastViewCount, lastMessageId, lastMessageText] = await Promise.all([
+    const [totalViewCount, lastStatsViewCount, lastMessageId, lastMessageText] = await Promise.all([
       getUserTotalViewCount(userId),
-      getLastViewCount(userId),
+      getLastStatsViewCount(userId),
       getLastMotivationalMessageId(userId),
       getLastMotivationalMessageText(userId),
     ]);
     
-    // Вычисляем просмотры за сессию от последнего сохраненного значения
-    const viewsThisSession = Math.max(0, totalViewCount - lastViewCount);
-    const message = generateMotivationalMessage(viewsThisSession, totalViewCount);
+    // Вычисляем просмотры с момента последнего вызова команды /stats
+    const viewsSinceLastStats = Math.max(0, totalViewCount - lastStatsViewCount);
+    const message = generateMotivationalMessage(viewsSinceLastStats, totalViewCount);
     
     // Если есть предыдущее сообщение с таким же текстом - редактируем его
     if (lastMessageId && lastMessageText === message) {
       try {
         await bot.api.editMessage(lastMessageId, { text: message });
-        // Обновляем lastViewCount после успешного редактирования
-        await saveLastViewCount(userId, totalViewCount);
-        console.log(`✅ Статистика отредактирована для пользователя ${userId}, просмотров за сессию: ${viewsThisSession}`);
+        // Обновляем lastStatsViewCount после успешного редактирования
+        await saveLastStatsViewCount(userId, totalViewCount);
+        console.log(`✅ Статистика отредактирована для пользователя ${userId}, просмотров с последнего запроса: ${viewsSinceLastStats}`);
         return;
       } catch (editError: any) {
         // Если редактирование не удалось (сообщение не найдено, чат удален и т.д.)
@@ -161,9 +163,9 @@ export async function checkAndSendMotivationalMessage(bot: Bot, userId: number):
     // Отправляем новое сообщение (если тексты разные, предыдущего сообщения нет или редактирование не удалось)
     const newMessage = await bot.api.sendMessageToUser(userId, message);
     await saveLastMotivationalMessageId(userId, newMessage.body.mid, message);
-    // Сохраняем текущее количество просмотров как базовое для следующей сессии
-    await saveLastViewCount(userId, totalViewCount);
-    console.log(`✅ Статистика отправлена пользователю ${userId}, просмотров за сессию: ${viewsThisSession}`);
+    // Сохраняем текущее количество просмотров для следующего вызова команды
+    await saveLastStatsViewCount(userId, totalViewCount);
+    console.log(`✅ Статистика отправлена пользователю ${userId}, просмотров с последнего запроса: ${viewsSinceLastStats}`);
   } catch (error: any) {
     console.error(`❌ Ошибка при отправке статистики пользователю ${userId}:`, error?.message || error);
     throw error;
