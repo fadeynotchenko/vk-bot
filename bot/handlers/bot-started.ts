@@ -1,5 +1,5 @@
 import { Context, Keyboard } from '@maxhub/max-bot-api';
-import { upsertUser, clearLastMotivationalMessage } from '../../db/db-user-utils.ts';
+import { upsertUser } from '../../db/db-user-utils.ts';
 
 /**
  * Обработчик события запуска бота.
@@ -14,8 +14,6 @@ export async function botStartedHandler(ctx: Context) {
   if (!user) return;
 
   await upsertUser(user.user_id, user.name);
-  
-  await clearLastMotivationalMessage(user.user_id);
 
   const siteUrl = process.env.WEB_APP_URL;
   const isLocalhost = siteUrl && (siteUrl.includes('localhost') || siteUrl.includes('127.0.0.1') || siteUrl.includes('0.0.0.0'));

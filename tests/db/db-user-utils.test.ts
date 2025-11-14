@@ -3,10 +3,6 @@ import {
   upsertUser,
   getLastViewCount,
   saveLastViewCount,
-  getLastMotivationalMessageId,
-  saveLastMotivationalMessageId,
-  getLastMotivationalMessageDate,
-  clearLastMotivationalMessage,
 } from '../../db/db-user-utils.ts';
 import { db } from '../../db/db-client.ts';
 
@@ -97,93 +93,5 @@ describe('db-user-utils', () => {
     });
   });
 
-  describe('getLastMotivationalMessageId', () => {
-    it('должен вернуть ID последнего сообщения', async () => {
-      const userId = 12345;
-      const messageId = 'msg-123';
-
-      mockCollection.findOne.mockResolvedValue({
-        lastMotivationalMessageId: messageId,
-      });
-
-      const result = await getLastMotivationalMessageId(userId);
-
-      expect(result).toBe(messageId);
-    });
-
-    it('должен вернуть null, если сообщения нет', async () => {
-      const userId = 12345;
-
-      mockCollection.findOne.mockResolvedValue(null);
-
-      const result = await getLastMotivationalMessageId(userId);
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('saveLastMotivationalMessageId', () => {
-    it('должен сохранить ID сообщения', async () => {
-      const userId = 12345;
-      const messageId = 'msg-456';
-
-      await saveLastMotivationalMessageId(userId, messageId);
-
-      expect(mockCollection.updateOne).toHaveBeenCalledWith(
-        { user_id: userId },
-        {
-          $set: {
-            lastMotivationalMessageId: messageId,
-            lastMotivationalMessageDate: expect.any(Date),
-          },
-        },
-        { upsert: true }
-      );
-    });
-  });
-
-  describe('getLastMotivationalMessageDate', () => {
-    it('должен вернуть дату последнего сообщения', async () => {
-      const userId = 12345;
-      const date = new Date('2024-01-01');
-
-      mockCollection.findOne.mockResolvedValue({
-        lastMotivationalMessageDate: date,
-      });
-
-      const result = await getLastMotivationalMessageDate(userId);
-
-      expect(result).toEqual(date);
-    });
-
-    it('должен вернуть null, если даты нет', async () => {
-      const userId = 12345;
-
-      mockCollection.findOne.mockResolvedValue(null);
-
-      const result = await getLastMotivationalMessageDate(userId);
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('clearLastMotivationalMessage', () => {
-    it('должен очистить данные о сообщении', async () => {
-      const userId = 12345;
-
-      await clearLastMotivationalMessage(userId);
-
-      expect(mockCollection.updateOne).toHaveBeenCalledWith(
-        { user_id: userId },
-        {
-          $unset: {
-            lastMotivationalMessageId: '',
-            lastMotivationalMessageDate: '',
-          },
-        },
-        { upsert: false }
-      );
-    });
-  });
 });
 

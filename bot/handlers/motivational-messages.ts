@@ -1,6 +1,6 @@
 import type { Bot } from '@maxhub/max-bot-api';
 import { getUserTotalViewCount } from '../../db/db-card-views-utils.ts';
-import { getLastStatsViewCount, saveLastStatsViewCount, saveLastMotivationalMessageId, getLastMotivationalMessageId, getLastMotivationalMessageText } from '../../db/db-user-utils.ts';
+import { getLastStatsViewCount, saveLastStatsViewCount } from '../../db/db-user-utils.ts';
 
 const MOTIVATION_MESSAGES_WITH_VIEWS: readonly string[] = [
   '🌟 Каждая инициатива, которую вы просматриваете, может стать реальной помощью для людей. Спасибо за ваше участие!',
@@ -124,9 +124,7 @@ function generateMotivationalMessage(viewsSinceLastStats: number, totalViews: nu
  * Логика работы:
  * - Вычисляет прогресс с момента последнего вызова команды /stats
  * - Генерирует новое сообщение со статистикой
- * - Если предыдущее сообщение имеет такой же текст - редактирует существующее сообщение
- * - Если тексты разные или предыдущего сообщения нет - отправляет новое сообщение
- * - Если редактирование не удалось (например, пользователь удалил чат) - отправляет новое сообщение
+ * - Отправляет новое сообщение пользователю
  * - Сохраняет текущее количество просмотров для следующего вызова команды
  * 
  * @param bot - экземпляр бота для отправки сообщений
@@ -134,35 +132,17 @@ function generateMotivationalMessage(viewsSinceLastStats: number, totalViews: nu
  */
 export async function sendStatsMessage(bot: Bot, userId: number): Promise<void> {
   try {
-    const [totalViewCount, lastStatsViewCount, lastMessageId, lastMessageText] = await Promise.all([
+    const [totalViewCount, lastStatsViewCount] = await Promise.all([
       getUserTotalViewCount(userId),
       getLastStatsViewCount(userId),
-      getLastMotivationalMessageId(userId),
-      getLastMotivationalMessageText(userId),
     ]);
     
     // Вычисляем просмотры с момента последнего вызова команды /stats
     const viewsSinceLastStats = Math.max(0, totalViewCount - lastStatsViewCount);
     const message = generateMotivationalMessage(viewsSinceLastStats, totalViewCount);
     
-    // Если есть предыдущее сообщение с таким же текстом - редактируем его
-    if (lastMessageId && lastMessageText === message) {
-      try {
-        await bot.api.editMessage(lastMessageId, { text: message });
-        // Обновляем lastStatsViewCount после успешного редактирования
-        await saveLastStatsViewCount(userId, totalViewCount);
-        console.log(`✅ Статистика отредактирована для пользователя ${userId}, просмотров с последнего запроса: ${viewsSinceLastStats}`);
-        return;
-      } catch (editError: any) {
-        // Если редактирование не удалось (сообщение не найдено, чат удален и т.д.)
-        // Отправляем новое сообщение
-        console.log(`⚠️ Не удалось отредактировать сообщение для пользователя ${userId}, отправляем новое: ${editError?.message || 'Unknown error'}`);
-      }
-    }
-    
-    // Отправляем новое сообщение (если тексты разные, предыдущего сообщения нет или редактирование не удалось)
-    const newMessage = await bot.api.sendMessageToUser(userId, message);
-    await saveLastMotivationalMessageId(userId, newMessage.body.mid, message);
+    // Отправляем новое сообщение
+    await bot.api.sendMessageToUser(userId, message);
     // Сохраняем текущее количество просмотров для следующего вызова команды
     await saveLastStatsViewCount(userId, totalViewCount);
     console.log(`✅ Статистика отправлена пользователю ${userId}, просмотров с последнего запроса: ${viewsSinceLastStats}`);

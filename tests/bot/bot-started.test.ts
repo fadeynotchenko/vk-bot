@@ -5,7 +5,6 @@ import { Context } from '@maxhub/max-bot-api';
 
 vi.mock('../../db/db-user-utils.ts', () => ({
   upsertUser: vi.fn(),
-  clearLastMotivationalMessage: vi.fn(),
 }));
 
 describe('botStartedHandler', () => {
@@ -28,12 +27,6 @@ describe('botStartedHandler', () => {
     await botStartedHandler(mockContext as Context);
 
     expect(dbUserUtils.upsertUser).toHaveBeenCalledWith(12345, 'Test User');
-  });
-
-  it('должен очистить данные о мотивационном сообщении', async () => {
-    await botStartedHandler(mockContext as Context);
-
-    expect(dbUserUtils.clearLastMotivationalMessage).toHaveBeenCalledWith(12345);
   });
 
   it('должен отправить приветственное сообщение', async () => {

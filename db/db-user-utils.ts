@@ -51,106 +51,11 @@ export async function saveLastStatsViewCount(user_id: number, viewCount: number)
     {
       $set: {
         lastStatsViewCount: viewCount,
-        lastStatsDate: new Date(),
       }
     },
     { upsert: true }
   );
   console.log(`✅ Сохранено количество просмотров для статистики пользователя ${user_id}: ${viewCount}`);
-}
-
-/**
- * Получает ID последнего отправленного мотивационного сообщения для пользователя.
- * 
- * @param user_id - идентификатор пользователя
- * @returns ID сообщения или null, если сообщение не было отправлено
- */
-export async function getLastMotivationalMessageId(user_id: number): Promise<string | null> {
-  const user = await db.collection('max_users').findOne(
-    { user_id: user_id },
-    { projection: { lastMotivationalMessageId: 1 } }
-  );
-  
-  return (user?.lastMotivationalMessageId as string) || null;
-}
-
-/**
- * Сохраняет ID последнего отправленного мотивационного сообщения для пользователя.
- * 
- * @param user_id - идентификатор пользователя
- * @param messageId - ID сообщения
- * @param messageText - текст сообщения
- */
-export async function saveLastMotivationalMessageId(user_id: number, messageId: string, messageText?: string): Promise<void> {
-  await db.collection('max_users').updateOne(
-    { user_id: user_id },
-    {
-      $set: {
-        lastMotivationalMessageId: messageId,
-        lastMotivationalMessageDate: new Date(),
-        ...(messageText ? { lastMotivationalMessageText: messageText } : {}),
-      }
-    },
-    { upsert: true }
-  );
-  console.log(`✅ Сохранен ID мотивационного сообщения для пользователя ${user_id}: ${messageId}`);
-}
-
-/**
- * Получает текст последнего отправленного мотивационного сообщения для пользователя.
- * 
- * @param user_id - идентификатор пользователя
- * @returns Текст сообщения или null, если сообщение не было отправлено
- */
-export async function getLastMotivationalMessageText(user_id: number): Promise<string | null> {
-  const user = await db.collection('max_users').findOne(
-    { user_id: user_id },
-    { projection: { lastMotivationalMessageText: 1 } }
-  );
-  
-  return (user?.lastMotivationalMessageText as string) || null;
-}
-
-/**
- * Получает дату последнего отправленного мотивационного сообщения для пользователя.
- * 
- * @param user_id - идентификатор пользователя
- * @returns Дата последнего сообщения или null, если сообщение не было отправлено
- */
-export async function getLastMotivationalMessageDate(user_id: number): Promise<Date | null> {
-  const user = await db.collection('max_users').findOne(
-    { user_id: user_id },
-    { projection: { lastMotivationalMessageDate: 1 } }
-  );
-  
-  if (user?.lastMotivationalMessageDate) {
-    return user.lastMotivationalMessageDate instanceof Date 
-      ? user.lastMotivationalMessageDate 
-      : new Date(user.lastMotivationalMessageDate);
-  }
-  
-  return null;
-}
-
-/**
- * Очищает данные о последнем мотивационном сообщении для пользователя.
- * Используется при перезапуске диалога (bot_started), когда старые сообщения больше не существуют.
- * 
- * @param user_id - идентификатор пользователя
- */
-export async function clearLastMotivationalMessage(user_id: number): Promise<void> {
-  await db.collection('max_users').updateOne(
-    { user_id: user_id },
-    {
-      $unset: {
-        lastMotivationalMessageId: '',
-        lastMotivationalMessageDate: '',
-        lastMotivationalMessageText: '',
-      }
-    },
-    { upsert: false }
-  );
-  console.log(`✅ Очищены данные о мотивационном сообщении для пользователя ${user_id}`);
 }
 
 /**
