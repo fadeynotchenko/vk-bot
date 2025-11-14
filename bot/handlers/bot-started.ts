@@ -34,6 +34,9 @@ export async function botStartedHandler(ctx: Context) {
     Keyboard.button.callback('🏆 Топ инициатив', 'top_command'),
     Keyboard.button.callback('👁️ Топ просмотров', 'top_views_command'),
   ]);
+  keyboardRows.push([
+    Keyboard.button.callback('📊 Моя статистика', 'stats_command'),
+  ]);
 
   const attachments = keyboardRows.length
     ? [Keyboard.inlineKeyboard(keyboardRows)]

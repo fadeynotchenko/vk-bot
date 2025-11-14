@@ -6,6 +6,7 @@ import { topViewsCommandHandler } from './handlers/top-views-command.ts';
 import { statsCommandHandler } from './handlers/stats-command.ts';
 import { topCallbackHandler } from './handlers/top-cards-callback.ts';
 import { topViewsCallbackHandler } from './handlers/top-views-callback.ts';
+import { statsCallbackHandler } from './handlers/stats-callback.ts';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ bot.command('stats', statsCommandHandler);
 bot.on('message_callback', async (ctx) => {
   await topCallbackHandler(bot, ctx);
   await topViewsCallbackHandler(bot, ctx);
+  await statsCallbackHandler(bot, ctx);
 });
 
 export { bot };
