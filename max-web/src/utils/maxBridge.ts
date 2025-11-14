@@ -3,7 +3,6 @@
  * Документация: https://dev.max.ru/docs/webapps/bridge
  */
 
-// Типы для MAX Bridge API
 declare global {
   interface Window {
     WebApp?: {
@@ -99,70 +98,68 @@ export function isMaxBridgeAvailable(): boolean {
 }
 
 /**
- * Подписывается на событие закрытия мини-приложения.
- * Использует VK Bridge событие VKWebAppViewHide согласно документации VK Bridge API.
- * Документация: https://dev.vk.com/mini-apps/development/bridge
- * 
- * @param callback - функция, которая будет вызвана при закрытии приложения
- * @returns функция для отписки от всех событий
+ * Подписывается на событие закрытия мини-приложения
  */
 export function onAppClose(callback: () => void): () => void {
-  let hasCalled = false;
+  let lastCallTime = 0;
+  const CALL_THROTTLE_MS = 1000;
+  let isClosing = false;
   
   const callOnce = () => {
-    if (hasCalled) {
+    if (isClosing) {
+      console.log('⚠️ App close callback already called, skipping duplicate call');
       return;
     }
-    hasCalled = true;
+    
+    const now = Date.now();
+    if (now - lastCallTime < CALL_THROTTLE_MS) {
+      console.log(`⚠️ App close callback called too soon (${now - lastCallTime}ms ago), skipping duplicate call`);
+      return;
+    }
+    lastCallTime = now;
+    isClosing = true;
     console.log('📱 Calling app close callback');
     try {
       callback();
     } catch (error) {
       console.error('❌ Error in app close callback:', error);
-      hasCalled = false; // Разрешаем повторный вызов при ошибке
+      isClosing = false;
+      lastCallTime = 0;
     }
   };
 
   const cleanupFunctions: Array<() => void> = [];
 
-  // Проверяем наличие VK Bridge (для мини-приложений ВКонтакте)
-  if (typeof window !== 'undefined' && (window as any).vkBridge) {
-    const vkBridge = (window as any).vkBridge;
-    
-    const handleVKEvent = (event: any) => {
-      if (event.detail?.type === 'VKWebAppViewHide') {
-        console.log('📱 VKWebAppViewHide event received');
-        callOnce();
-      }
+  if (window.WebApp?.onEvent) {
+    const handleBackButton = () => {
+      console.log('📱 App close event detected (backButtonClicked)');
+      callOnce();
     };
 
     try {
-      vkBridge.subscribe(handleVKEvent);
-      console.log('✅ Subscribed to VKWebAppViewHide event');
+      window.WebApp.onEvent('backButtonClicked', handleBackButton);
+      console.log('✅ Subscribed to backButtonClicked event (critical for mobile)');
       cleanupFunctions.push(() => {
-        if (vkBridge.unsubscribe) {
-          vkBridge.unsubscribe(handleVKEvent);
-          console.log('🔕 Unsubscribed from VKWebAppViewHide event');
+        if (window.WebApp?.offEvent) {
+          window.WebApp.offEvent('backButtonClicked', handleBackButton);
+          console.log('🔕 Unsubscribed from backButtonClicked event');
         }
       });
     } catch (error) {
-      console.error('❌ Failed to subscribe to VKWebAppViewHide event:', error);
+      console.error('❌ Failed to subscribe to backButtonClicked event:', error);
     }
-  }
 
-  // Проверяем наличие MAX Bridge (для мини-приложений MAX)
-  if (window.WebApp?.onEvent) {
     const handleViewportChanged = (data: any) => {
       console.log('🔔 viewportChanged event received:', data);
-      if (data?.isStateVisible === false) {
-        console.log('📱 App close event detected (viewportChanged with isStateVisible: false)');
+      if (data?.isStateVisible === false || data?.isExpanded === false) {
+        console.log('📱 App close event detected (viewportChanged with isStateVisible: false or isExpanded: false)');
         callOnce();
       }
     };
 
     try {
       window.WebApp.onEvent('viewportChanged', handleViewportChanged);
-      console.log('✅ Subscribed to viewportChanged event (MAX Bridge)');
+      console.log('✅ Subscribed to viewportChanged event');
       cleanupFunctions.push(() => {
         if (window.WebApp?.offEvent) {
           window.WebApp.offEvent('viewportChanged', handleViewportChanged);
@@ -172,18 +169,41 @@ export function onAppClose(callback: () => void): () => void {
     } catch (error) {
       console.error('❌ Failed to subscribe to viewportChanged event:', error);
     }
+  } else {
+    console.warn('⚠️ MAX Bridge onEvent is not available, using browser events only');
   }
 
-  // Fallback: событие pagehide (надежнее для мобильных)
   const handlePageHide = (event: PageTransitionEvent) => {
     if (!event.persisted) {
-      console.log('📱 App close event detected (pagehide)');
+      console.log('📱 App close event detected (pagehide, not persisted)');
+      callOnce();
+    } else {
+      console.log('📱 Page hidden but persisted (likely cached), not treating as close');
+    }
+  };
+  window.addEventListener('pagehide', handlePageHide, { capture: true });
+  cleanupFunctions.push(() => {
+    window.removeEventListener('pagehide', handlePageHide, { capture: true });
+  });
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      console.log('📱 App close event detected (visibilitychange: hidden)');
       callOnce();
     }
   };
-  window.addEventListener('pagehide', handlePageHide);
+  document.addEventListener('visibilitychange', handleVisibilityChange, { capture: true });
   cleanupFunctions.push(() => {
-    window.removeEventListener('pagehide', handlePageHide);
+    document.removeEventListener('visibilitychange', handleVisibilityChange, { capture: true });
+  });
+
+  const handleBeforeUnload = () => {
+    console.log('📱 App close event detected (beforeunload)');
+    callOnce();
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  cleanupFunctions.push(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
   });
 
   return () => {
