@@ -26,7 +26,9 @@ const app = Fastify({
 
 async function startServer() {
   try {
+    console.log('🔌 Подключение к базе данных...');
     await connectDB();
+    console.log('✅ Подключение к базе данных установлено');
 
     await app.register(cors, {
       origin: true,
@@ -53,11 +55,25 @@ async function startServer() {
     await app.listen({ host, port });
     console.log(`✅ API успешно запущен: ${host}:${port}`);
   } catch (error) {
-    console.error("❌ Не удалось запустить API:", error);
+    console.error("❌ Не удалось запустить API:");
+    console.error("❌ Тип ошибки:", typeof error);
+    console.error("❌ Ошибка:", error);
+    
     if (error instanceof Error) {
-      console.error("❌ Ошибка:", error.message);
+      console.error("❌ Сообщение:", error.message);
       console.error("❌ Stack:", error.stack);
+    } else if (error && typeof error === 'object') {
+      try {
+        console.error("❌ JSON:", JSON.stringify(error, null, 2));
+      } catch {
+        console.error("❌ Не удалось сериализовать ошибку");
+      }
     }
+    
+    if (error && typeof error === 'object' && 'cause' in error) {
+      console.error("❌ Причина:", error.cause);
+    }
+    
     process.exit(1);
   }
 }

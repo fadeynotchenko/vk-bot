@@ -14,7 +14,11 @@ bot.on('bot_started', botStartedHandler);
 bot.command('top', topCommandHandler);
 
 // Обработчик callback кнопки "Топ"
-bot.callback('top_command', topCommandHandler);
+bot.on('message_callback', async (ctx) => {
+  if ('callbackData' in ctx && ctx.callbackData === 'top_command') {
+    await topCommandHandler(ctx);
+  }
+});
 
 // Экспортируем бота для использования в других модулях (без запуска)
 export { bot };
@@ -25,7 +29,7 @@ export async function registerBotCommands(): Promise<void> {
     if (bot.api.setMyCommands) {
       await bot.api.setMyCommands([
         {
-          command: 'top',
+          name: 'top',
           description: 'Показать топ инициатив по просмотрам',
         },
       ]);

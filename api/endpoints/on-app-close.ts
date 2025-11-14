@@ -24,14 +24,21 @@ export async function handleOnAppClose(req: FastifyRequest, reply: FastifyReply)
 
     const contentType = req.headers['content-type'] || '';
     
-    if (contentType.includes('multipart/form-data') || req.isMultipart()) {
+    if (contentType.includes('multipart/form-data')) {
       try {
-        const parts = req.parts();
-        for await (const part of parts) {
-          if (part.type === 'field' && part.fieldname === 'user_id') {
-            user_id = Number(part.value);
-            break;
+        const isMultipart = 'isMultipart' in req && typeof req.isMultipart === 'function' && req.isMultipart();
+        if (isMultipart && 'parts' in req && typeof req.parts === 'function') {
+          const parts = req.parts();
+          for await (const part of parts) {
+            if (part.type === 'field' && part.fieldname === 'user_id') {
+              user_id = Number(part.value);
+              break;
+            }
           }
+        } else {
+          // Fallback: пробуем распарсить как JSON
+          const body = req.body as any;
+          user_id = body?.user_id;
         }
       } catch (parseError: any) {
         req.log.error({ method: 'onAppClose', error: parseError?.message }, 'Failed to parse FormData body');
