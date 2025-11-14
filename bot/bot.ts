@@ -1,7 +1,14 @@
 import { connectDB } from '../db/db-client.ts';
-import { bot } from './bot-instance.ts';
+import { bot, registerBotCommands } from './bot-instance.ts';
 
 await connectDB();
+
+// Регистрация списка команд перед запуском бота
+try {
+  await registerBotCommands();
+} catch (error) {
+  console.warn('⚠️ Не удалось зарегистрировать команды перед запуском:', error);
+}
 
 // Запуск бота
 try {
