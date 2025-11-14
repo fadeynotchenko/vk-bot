@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ObjectId } from 'mongodb';
-import { getMaxCards, getUserMaxCards, createMaxCard } from '../../db/db-card-utils.ts';
+import { getMaxCards, getUserMaxCards, createMaxCard, updateMaxCard, deleteMaxCard } from '../../db/db-card-utils.ts';
 import { db } from '../../db/db-client.ts';
 
-// Мокаем модуль базы данных
 vi.mock('../../db/db-client.ts', () => ({
   db: {
     collection: vi.fn(),
@@ -18,6 +17,8 @@ describe('db-card-utils', () => {
     mockCollection = {
       aggregate: vi.fn().mockReturnThis(),
       insertOne: vi.fn(),
+      findOneAndUpdate: vi.fn(),
+      deleteOne: vi.fn(),
       toArray: vi.fn(),
     };
     vi.mocked(db.collection).mockReturnValue(mockCollection as any);
@@ -162,6 +163,178 @@ describe('db-card-utils', () => {
         user_id: cardInput.user_id,
         image: cardInput.image,
       });
+    });
+  });
+
+  describe('updateMaxCard', () => {
+    it('должен обновить существующую карточку', async () => {
+      const cardId = '507f1f77bcf86cd799439011';
+      const updates = {
+        title: 'Обновленное название',
+        status: 'accepted' as const,
+      };
+
+      const updatedDoc = {
+        _id: new ObjectId(cardId),
+        category: 'благотворительность',
+        title: 'Обновленное название',
+        subtitle: 'Описание',
+        text: 'Полное описание',
+        status: 'accepted',
+        date: new Date('2024-01-01'),
+        view_count: 5,
+      };
+
+      mockCollection.findOneAndUpdate.mockResolvedValue(updatedDoc);
+      
+      const mockViewsCollection = {
+        aggregate: vi.fn().mockReturnThis(),
+        toArray: vi.fn().mockResolvedValue([{ totalViews: 5 }]),
+      };
+      vi.mocked(db.collection).mockImplementation((name: string) => {
+        if (name === 'card_views') {
+          return mockViewsCollection as any;
+        }
+        return mockCollection as any;
+      });
+
+      const result = await updateMaxCard(cardId, updates);
+
+      expect(db.collection).toHaveBeenCalledWith('max_cards');
+      expect(mockCollection.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: new ObjectId(cardId) },
+        { $set: expect.objectContaining({ title: updates.title, status: updates.status }) },
+        { returnDocument: 'after' }
+      );
+      expect(result).not.toBeNull();
+      expect(result).toMatchObject({
+        id: cardId,
+        title: 'Обновленное название',
+        status: 'accepted',
+        view_count: 5,
+      });
+    });
+
+    it('должен вернуть null, если карточка не найдена', async () => {
+      const cardId = '507f1f77bcf86cd799439011';
+      const updates = { title: 'Новое название' };
+
+      mockCollection.findOneAndUpdate.mockResolvedValue(null);
+
+      const result = await updateMaxCard(cardId, updates);
+
+      expect(result).toBeNull();
+    });
+
+    it('должен вернуть null для невалидного ObjectId', async () => {
+      const invalidCardId = 'invalid-id';
+      const updates = { title: 'Новое название' };
+
+      const result = await updateMaxCard(invalidCardId, updates);
+
+      expect(result).toBeNull();
+      expect(mockCollection.findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('должен обновить только указанные поля', async () => {
+      const cardId = '507f1f77bcf86cd799439011';
+      const updates = {
+        category: 'волонтерство',
+      };
+
+      const updatedDoc = {
+        _id: new ObjectId(cardId),
+        category: 'волонтерство',
+        title: 'Старое название',
+        subtitle: 'Описание',
+        text: 'Полное описание',
+        status: 'moderate',
+        date: new Date('2024-01-01'),
+      };
+
+      mockCollection.findOneAndUpdate.mockResolvedValue(updatedDoc);
+      
+      const mockViewsCollection = {
+        aggregate: vi.fn().mockReturnThis(),
+        toArray: vi.fn().mockResolvedValue([{ totalViews: 0 }]),
+      };
+      vi.mocked(db.collection).mockImplementation((name: string) => {
+        if (name === 'card_views') {
+          return mockViewsCollection as any;
+        }
+        return mockCollection as any;
+      });
+
+      const result = await updateMaxCard(cardId, updates);
+
+      expect(mockCollection.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: new ObjectId(cardId) },
+        { $set: expect.objectContaining({ category: 'волонтерство' }) },
+        { returnDocument: 'after' }
+      );
+      expect(result).not.toBeNull();
+      expect(result?.category).toBe('волонтерство');
+    });
+  });
+
+  describe('deleteMaxCard', () => {
+    it('должен удалить существующую карточку', async () => {
+      const cardId = '507f1f77bcf86cd799439011';
+
+      mockCollection.deleteOne.mockResolvedValue({
+        deletedCount: 1,
+      });
+
+      const result = await deleteMaxCard(cardId);
+
+      expect(db.collection).toHaveBeenCalledWith('max_cards');
+      expect(mockCollection.deleteOne).toHaveBeenCalledWith({
+        _id: new ObjectId(cardId),
+      });
+      expect(result).toBe(true);
+    });
+
+    it('должен вернуть false, если карточка не найдена', async () => {
+      const cardId = '507f1f77bcf86cd799439011';
+
+      mockCollection.deleteOne.mockResolvedValue({
+        deletedCount: 0,
+      });
+
+      const result = await deleteMaxCard(cardId);
+
+      expect(result).toBe(false);
+    });
+
+    it('должен вернуть false для невалидного ObjectId', async () => {
+      const invalidCardId = 'invalid-id';
+
+      const result = await deleteMaxCard(invalidCardId);
+
+      expect(result).toBe(false);
+      expect(mockCollection.deleteOne).not.toHaveBeenCalled();
+    });
+
+    it('не должен удалять связанные просмотры при удалении карточки', async () => {
+      const cardId = '507f1f77bcf86cd799439011';
+
+      mockCollection.deleteOne.mockResolvedValue({
+        deletedCount: 1,
+      });
+
+      const mockViewsCollection = {
+        deleteMany: vi.fn(),
+      };
+      vi.mocked(db.collection).mockImplementation((name: string) => {
+        if (name === 'card_views') {
+          return mockViewsCollection as any;
+        }
+        return mockCollection as any;
+      });
+
+      await deleteMaxCard(cardId);
+
+      expect(mockViewsCollection.deleteMany).not.toHaveBeenCalled();
     });
   });
 });

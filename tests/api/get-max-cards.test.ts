@@ -3,7 +3,6 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { handleGetMaxCards } from '../../api/endpoints/get-max-cards.ts';
 import * as dbCardUtils from '../../db/db-card-utils.ts';
 
-// Мокаем модуль базы данных
 vi.mock('../../db/db-card-utils.ts', () => ({
   getMaxCards: vi.fn(),
 }));

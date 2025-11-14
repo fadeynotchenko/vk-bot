@@ -280,9 +280,6 @@ export async function deleteMaxCard(cardId: string): Promise<boolean> {
 
   const result = await cardsCollection.deleteOne({ _id: objectId });
   
-  // Также удаляем связанные просмотры
-  const viewsCollection = db.collection('card_views');
-  await viewsCollection.deleteMany({ card_id: cardId });
 
   return result.deletedCount > 0;
 }

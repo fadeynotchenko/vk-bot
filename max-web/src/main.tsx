@@ -13,7 +13,6 @@ function initMaxBridge() {
     return;
   }
 
-  // Проверяем наличие WebApp
   if (window.WebApp?.ready) {
     notifyMaxReady();
   } else {

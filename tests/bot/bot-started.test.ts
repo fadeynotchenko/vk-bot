@@ -3,7 +3,6 @@ import { botStartedHandler } from '../../bot/handlers/bot-started.ts';
 import * as dbUserUtils from '../../db/db-user-utils.ts';
 import { Context } from '@maxhub/max-bot-api';
 
-// Мокаем модули
 vi.mock('../../db/db-user-utils.ts', () => ({
   upsertUser: vi.fn(),
   clearLastMotivationalMessage: vi.fn(),
@@ -73,15 +72,10 @@ describe('botStartedHandler', () => {
     await botStartedHandler(mockContext as Context);
 
     const callArgs = vi.mocked(mockContext.reply).mock.calls[0];
-    // Для localhost клавиатура все равно добавляется (с кнопкой VK Добро),
-    // но без кнопки мини-приложения. Проверяем, что attachments определен
-    // и содержит только кнопку VK Добро
     expect(callArgs[1]).toBeDefined();
     if (callArgs[1] && callArgs[1].attachments) {
-      // Клавиатура должна быть, но без кнопки мини-приложения
       const attachments = callArgs[1].attachments;
       expect(attachments).toBeDefined();
-      // Проверяем, что в сообщении есть ссылка на localhost (в тексте, а не в клавиатуре)
       expect(callArgs[0]).toContain('localhost:4173');
     }
   });

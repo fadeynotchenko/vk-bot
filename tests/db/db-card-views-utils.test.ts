@@ -7,7 +7,6 @@ import {
 } from '../../db/db-card-views-utils.ts';
 import { db } from '../../db/db-client.ts';
 
-// Мокаем модуль базы данных
 vi.mock('../../db/db-client.ts', () => ({
   db: {
     collection: vi.fn(),

@@ -3,7 +3,6 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { handleTrackCardView } from '../../api/endpoints/track-card-view.ts';
 import * as dbCardViewsUtils from '../../db/db-card-views-utils.ts';
 
-// Мокаем модуль базы данных
 vi.mock('../../db/db-card-views-utils.ts', () => ({
   trackCardView: vi.fn(),
 }));

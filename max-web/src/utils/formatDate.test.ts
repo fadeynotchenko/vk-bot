@@ -30,9 +30,7 @@ describe('formatCardDate', () => {
     const dateString = '2024-03-15T10:30:00.000Z';
     const result = formatCardDate(dateString);
 
-    // Проверяем, что форматирование использует русскую локаль
     expect(result).toBeTruthy();
-    // В русской локали месяц должен быть в родительном падеже
     expect(typeof result).toBe('string');
   });
 });
